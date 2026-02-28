@@ -1,72 +1,57 @@
-
-// Fix: Added React to imports to resolve namespace error when using React.FC
 import React, { useState, useEffect } from 'react';
 import { generateQuiz, getGrammarExplanation } from '../services/geminiService';
 import { QuizQuestion, SourceLang } from '../types';
-import NeonButton from './NeonButton';
 
-interface QuizComponentProps {
+interface Props {
   topic: string;
   lang?: SourceLang;
   onMastered?: () => void;
 }
 
-const QuizComponent: React.FC<QuizComponentProps> = ({ topic, lang = 'no', onMastered }) => {
+const QuizComponent: React.FC<Props> = ({ topic, lang = 'no', onMastered }) => {
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [score, setScore] = useState(0);
   const [wrongCount, setWrongCount] = useState(0);
-  const [currentLevel, setCurrentLevel] = useState(1);
-  const [unlockedLevel, setUnlockedLevel] = useState(1);
-  const [isQuizActive, setIsQuizActive] = useState(false);
+  const [isActive, setIsActive] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
+  const [unlockedLevel, setUnlockedLevel] = useState(1);
+  const [currentLevel, setCurrentLevel] = useState(1);
   const [hintsLeft, setHintsLeft] = useState(3);
-  const [currentHint, setCurrentHint] = useState<string | null>(null);
+  const [hint, setHint] = useState<string | null>(null);
   const [hintLoading, setHintLoading] = useState(false);
 
-  useEffect(() => {
-    resetQuizState();
-  }, [topic, lang]);
+  useEffect(() => { reset(); }, [topic, lang]);
 
-  const resetQuizState = () => {
-    setQuestions([]);
-    setCurrentIndex(0);
-    setScore(0);
-    setWrongCount(0);
-    setShowResult(false);
-    setHintsLeft(3);
-    setCurrentHint(null);
-    setIsQuizActive(false);
-    setIsFinished(false);
+  const reset = () => {
+    setQuestions([]); setCurrentIndex(0); setScore(0); setWrongCount(0);
+    setSelected(null); setShowResult(false); setHintsLeft(3); setHint(null);
+    setIsActive(false); setIsFinished(false);
   };
 
-  const loadQuiz = async (level: number) => {
+  const startQuiz = async (level: number) => {
     setLoading(true);
     setCurrentLevel(level);
     try {
-      const quiz = await generateQuiz(topic, 5, level, lang as SourceLang);
+      const quiz = await generateQuiz(topic, 5, level, lang);
       setQuestions(quiz);
-      setCurrentIndex(0);
-      setScore(0);
-      setWrongCount(0);
-      setShowResult(false);
-      setHintsLeft(3);
-      setIsQuizActive(true);
-      setIsFinished(false);
-    } catch (err) {
-      console.error(err);
+      setCurrentIndex(0); setScore(0); setWrongCount(0);
+      setSelected(null); setShowResult(false);
+      setHintsLeft(3); setHint(null);
+      setIsActive(true); setIsFinished(false);
+    } catch {
+      // failed to load
     } finally {
       setLoading(false);
     }
   };
 
   const handleCheck = () => {
-    if (!selectedOption) return;
-    const isCorrect = selectedOption === questions[currentIndex].correctAnswer;
-    if (isCorrect) {
+    if (!selected) return;
+    if (selected === questions[currentIndex].correctAnswer) {
       setScore(s => s + 1);
     } else {
       setWrongCount(w => w + 1);
@@ -75,245 +60,268 @@ const QuizComponent: React.FC<QuizComponentProps> = ({ topic, lang = 'no', onMas
   };
 
   const handleNext = () => {
-    setCurrentHint(null); 
+    setHint(null);
     if (currentIndex < questions.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-      setSelectedOption(null);
+      setCurrentIndex(i => i + 1);
+      setSelected(null);
       setShowResult(false);
     } else {
       setIsFinished(true);
     }
   };
 
-  const finalizeQuiz = () => {
-    const perfectScore = score === questions.length;
-    if (perfectScore) {
+  const finalize = () => {
+    const perfect = score === questions.length;
+    if (perfect) {
       setUnlockedLevel(prev => Math.min(prev + 1, 10));
-      if (onMastered) onMastered();
+      onMastered?.();
     }
-    setIsQuizActive(false);
+    setIsActive(false);
     setIsFinished(false);
   };
 
-  const handleHint = async () => {
+  const getHint = async () => {
     if (hintsLeft <= 0 || hintLoading || showResult) return;
     setHintLoading(true);
     try {
-      const hint = await getGrammarExplanation(
+      const h = await getGrammarExplanation(
         topic,
-        `Question: "${questions[currentIndex].question}". Give a pedagogical hint in ${lang === 'no' ? 'Norwegian' : 'Russian'}.`,
-        lang as SourceLang
+        `Question: "${questions[currentIndex].question}". Give a brief hint in ${lang === 'no' ? 'Norwegian' : 'Russian'}.`,
+        lang
       );
-      setCurrentHint(hint);
+      setHint(h);
       setHintsLeft(prev => prev - 1);
-    } catch (err) {
-      console.error(err);
     } finally {
       setHintLoading(false);
     }
   };
 
-  const localized = {
-    no: {
-      test: 'Kunnskapstest',
-      stats: 'Systemstatus',
-      correct: 'Suksess',
-      wrong: 'Systemfeil',
-      next: 'Neste',
-      check: 'Sjekk',
-      retry: 'Restart Nivå',
-      continue: 'Godkjenn og Lås Opp',
-      perfect: 'PERFEKT SYNTAKS - ADGANG INNVILGET',
-      failed: 'LOGISK BRIST - ADGANG NEKTET',
-      requirements: 'Krav: 100% nøyaktighet for å låse opp neste trinn.'
-    },
-    ru: {
-      test: 'Тест знаний',
-      stats: 'Статус системы',
-      correct: 'Успех',
-      wrong: 'Ошибка системы',
-      next: 'Далее',
-      check: 'Проверить',
-      retry: 'Перезапустить уровень',
-      continue: 'Подтвердить и Открыть',
-      perfect: 'ИДЕАЛЬНЫЙ СИНТАКСИС - ДОСТУП РАЗРЕШЕН',
-      failed: 'ЛОГИЧЕСКАЯ ОШИБКА - ДОСТУП ЗАПРЕЩЕН',
-      requirements: 'Требование: 100% точность для разблокировки следующего шага.'
-    }
-  }[lang as SourceLang];
-
+  // ── Loading ──────────────────────────────────────────────────────────────
   if (loading) return (
-    <div className="p-12 glass-panel border border-cyan/20 flex flex-col items-center justify-center space-y-4">
-      <div className="w-12 h-12 border-4 border-cyan border-t-transparent rounded-full animate-spin shadow-[0_0_15px_#00D9FF]"></div>
-      <p className="font-mono text-cyan text-xs tracking-widest animate-pulse uppercase">HENTER_TESTDATA_V{currentLevel}.0...</p>
+    <div
+      className="p-10 rounded-2xl flex flex-col items-center gap-4"
+      style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+    >
+      <div className="w-10 h-10 rounded-full border-4 animate-spin" style={{ borderColor: 'var(--primary)', borderTopColor: 'transparent' }} />
+      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Lager spørsmål på nivå {currentLevel}...</p>
     </div>
   );
 
-  // Summary Screen
+  // ── Finished screen ──────────────────────────────────────────────────────
   if (isFinished) {
-    const isPerfect = score === questions.length;
+    const perfect = score === questions.length;
+    const pct = Math.round((score / questions.length) * 100);
     return (
-      <div className="glass-panel p-10 rounded-lg border-2 border-dashed border-white/10 text-center animate-in zoom-in-95 duration-500">
-        <h3 className={`font-heading text-3xl mb-4 ${isPerfect ? 'text-lime neon-text-lime' : 'text-magenta'}`}>
-          {isPerfect ? localized.perfect : localized.failed}
+      <div
+        className="p-6 rounded-2xl text-center animate-popIn"
+        style={{
+          background: perfect ? 'rgba(74,222,128,0.07)' : 'rgba(249,115,22,0.07)',
+          border: `1px solid ${perfect ? 'rgba(74,222,128,0.3)' : 'rgba(249,115,22,0.2)'}`,
+        }}
+      >
+        <div className="text-4xl mb-3">{perfect ? '🎉' : '💪'}</div>
+        <h3 className="text-xl font-black mb-1" style={{ color: perfect ? 'var(--success)' : 'var(--primary)' }}>
+          {perfect ? 'Perfekt!' : 'Bra jobbet!'}
         </h3>
-        <div className="flex justify-center gap-12 my-8 font-mono">
-          <div className="text-center">
-            <div className="text-[10px] text-white/40 uppercase mb-1">Riktige Svar</div>
-            <div className={`text-4xl ${isPerfect ? 'text-lime' : 'text-white'}`}>{score} / {questions.length}</div>
-          </div>
-          <div className="text-center">
-            <div className="text-[10px] text-white/40 uppercase mb-1">Presisjon</div>
-            <div className={`text-4xl ${isPerfect ? 'text-lime' : 'text-magenta'}`}>{Math.round((score/questions.length)*100)}%</div>
-          </div>
-        </div>
-        
-        {isPerfect ? (
-          <div className="space-y-6">
-            <p className="text-lime/70 text-sm italic">"Systemet er validert. Du har full kontroll på denne modulen."</p>
-            <NeonButton variant="lime" onClick={finalizeQuiz} className="w-full py-4">
-              {localized.continue}
-            </NeonButton>
+        <p className="text-sm mb-5" style={{ color: 'var(--text-muted)' }}>
+          {score}/{questions.length} riktige svar · {pct}% nøyaktighet
+        </p>
+
+        {perfect ? (
+          <div className="space-y-3">
+            <p className="text-sm" style={{ color: 'var(--success)' }}>
+              Du mestret denne leksjonen! Neste nivå er låst opp.
+            </p>
+            <button
+              onClick={finalize}
+              className="btn-primary w-full py-3"
+            >
+              Fullfør og tjen XP →
+            </button>
           </div>
         ) : (
-          <div className="space-y-6">
-            <p className="text-magenta/70 text-sm italic">"Vi tolererer ikke middelmådighet. Du må ha alt rett for å avansere."</p>
-            <NeonButton variant="magenta" onClick={() => loadQuiz(currentLevel)} className="w-full py-4">
-              {localized.retry}
-            </NeonButton>
+          <div className="space-y-3">
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              Du trenger 100% for å gå videre. Prøv igjen!
+            </p>
+            <button
+              onClick={() => startQuiz(currentLevel)}
+              className="btn-secondary w-full py-3"
+            >
+              Prøv igjen
+            </button>
           </div>
         )}
       </div>
     );
   }
 
-  // Quiz Levels Overview
-  if (!isQuizActive) {
+  // ── Level selector ──────────────────────────────────────────────────────
+  if (!isActive) {
     return (
-      <div className="glass-panel p-8 rounded-lg border border-lime/30 relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-3">
-           <span className="text-[9px] font-mono text-lime/60 uppercase tracking-widest bg-lime/10 px-2 py-1 rounded border border-lime/20">{localized.requirements}</span>
+      <div
+        className="p-5 rounded-2xl"
+        style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-xl">🧠</span>
+          <h3 className="font-black text-base">Kunnskapstest: {topic}</h3>
         </div>
-        <h3 className="text-lime font-heading text-xl mb-6 uppercase tracking-tighter flex items-center gap-3">
-          <span className="w-2 h-2 bg-lime rounded-full animate-pulse"></span>
-          {localized.test}: {topic}
-        </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-          {Array.from({ length: 10 }).map((_, i) => (
+        <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
+          Velg et nivå. Du må svare 100% riktig for å gå videre.
+        </p>
+        <div className="grid grid-cols-5 gap-2">
+          {Array.from({ length: 10 }, (_, i) => i + 1).map(lvl => {
+            const unlocked = lvl <= unlockedLevel;
+            const active = lvl === unlockedLevel;
+            return (
+              <button
+                key={lvl}
+                disabled={!unlocked}
+                onClick={() => startQuiz(lvl)}
+                className="h-11 rounded-xl font-bold text-sm transition-all relative"
+                style={{
+                  background: unlocked
+                    ? active ? 'var(--primary)' : 'rgba(74,222,128,0.12)'
+                    : 'rgba(255,255,255,0.03)',
+                  color: unlocked
+                    ? active ? 'white' : 'var(--success)'
+                    : 'var(--text-faint)',
+                  cursor: unlocked ? 'pointer' : 'not-allowed',
+                  border: `1px solid ${active ? 'transparent' : unlocked ? 'rgba(74,222,128,0.2)' : 'var(--border)'}`,
+                }}
+              >
+                {lvl}
+                {lvl < unlockedLevel && (
+                  <span className="absolute -top-1 -right-1 text-[10px]">✓</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Active quiz ──────────────────────────────────────────────────────────
+  const q = questions[currentIndex];
+
+  return (
+    <div
+      className="p-5 rounded-2xl animate-fadeInUp"
+      style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+    >
+      {/* Progress bar */}
+      <div className="flex gap-1.5 mb-4">
+        {questions.map((_, i) => (
+          <div
+            key={i}
+            className="h-1.5 flex-1 rounded-full"
+            style={{
+              background: i < currentIndex
+                ? 'var(--success)'
+                : i === currentIndex
+                ? 'var(--primary)'
+                : 'rgba(255,255,255,0.06)',
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Stats */}
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex gap-4 text-sm">
+          <span className="font-bold" style={{ color: 'var(--success)' }}>✓ {score}</span>
+          <span className="font-bold" style={{ color: 'var(--danger)' }}>✗ {wrongCount}</span>
+        </div>
+        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+          Spørsmål {currentIndex + 1} av {questions.length} · Nivå {currentLevel}
+        </span>
+      </div>
+
+      {/* Question */}
+      <h3 className="text-base font-bold mb-5 leading-snug">{q.question}</h3>
+
+      {/* Options */}
+      <div className="space-y-2.5 mb-5">
+        {q.options.map((opt, i) => {
+          let bg = 'rgba(255,255,255,0.03)';
+          let borderColor = 'var(--border)';
+          let textColor = 'var(--text)';
+          if (showResult) {
+            if (opt === q.correctAnswer) {
+              bg = 'rgba(74,222,128,0.1)'; borderColor = 'rgba(74,222,128,0.4)'; textColor = 'var(--success)';
+            } else if (selected === opt) {
+              bg = 'rgba(248,113,113,0.08)'; borderColor = 'rgba(248,113,113,0.3)'; textColor = 'var(--danger)';
+            } else {
+              textColor = 'var(--text-faint)';
+            }
+          } else if (selected === opt) {
+            bg = 'rgba(56,189,248,0.08)'; borderColor = 'rgba(56,189,248,0.4)'; textColor = 'var(--secondary)';
+          }
+          return (
             <button
               key={i}
-              disabled={i + 1 > unlockedLevel}
-              onClick={() => loadQuiz(i + 1)}
-              className={`p-4 rounded border-2 transition-all font-heading text-xl relative group ${i + 1 <= unlockedLevel ? 'border-lime text-lime hover:bg-lime/10' : 'border-white/5 text-white/10 cursor-not-allowed'}`}
+              disabled={showResult}
+              onClick={() => setSelected(opt)}
+              className="w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all"
+              style={{ background: bg, border: `1.5px solid ${borderColor}`, color: textColor }}
             >
-              {i + 1}
-              {i + 1 === unlockedLevel && (
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-lime rounded-full shadow-[0_0_8px_#FFBE0B]"></span>
-              )}
-              {i + 1 < unlockedLevel && (
-                <span className="absolute bottom-1 right-1 text-[8px] opacity-40">✓</span>
-              )}
+              <div className="flex items-center justify-between">
+                <span>{opt}</span>
+                {showResult && opt === q.correctAnswer && <span>✓</span>}
+                {showResult && selected === opt && opt !== q.correctAnswer && <span>✗</span>}
+              </div>
             </button>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  const q = questions[currentIndex];
-  return (
-    <div className="glass-panel p-8 rounded-lg border border-lime/30 animate-in fade-in slide-in-from-bottom-4">
-      {/* HUD Stats */}
-      <div className="flex justify-between items-center mb-8 pb-4 border-b border-white/5 font-mono">
-        <div className="flex gap-8">
-          <div className="flex flex-col">
-            <span className="text-[10px] text-lime/50 uppercase tracking-widest">{localized.correct}</span>
-            <span className="text-lime text-2xl font-bold leading-none">{score}</span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[10px] text-magenta/50 uppercase tracking-widest">{localized.wrong}</span>
-            <span className="text-magenta text-2xl font-bold leading-none">{wrongCount}</span>
-          </div>
-        </div>
-        <div className="text-right">
-          <span className="text-[10px] text-white/30 uppercase block mb-1">Sekvens</span>
-          <span className="text-white text-xl font-heading">{currentIndex + 1} <span className="text-white/20">/</span> {questions.length}</span>
-        </div>
+          );
+        })}
       </div>
 
-      <div className="mb-6 flex gap-1.5">
-        {questions.map((_, i) => (
-          <div key={i} className={`h-1.5 flex-1 rounded-sm transition-all duration-500 ${i < currentIndex ? 'bg-lime shadow-[0_0_8px_#FFBE0B]' : i === currentIndex ? 'bg-white/40 animate-pulse' : 'bg-white/5'}`}></div>
-        ))}
-      </div>
-
-      <h3 className="text-white font-heading text-xl mb-10 leading-tight min-h-[3rem]">{q.question}</h3>
-      
-      <div className="space-y-4 mb-10">
-        {q.options.map((opt, i) => (
-          <button
-            key={i}
-            onClick={() => setSelectedOption(opt)}
-            disabled={showResult}
-            className={`w-full text-left p-5 rounded border-2 transition-all group relative overflow-hidden ${
-              showResult 
-                ? opt === q.correctAnswer 
-                  ? 'border-lime text-lime bg-lime/10' 
-                  : selectedOption === opt 
-                    ? 'border-magenta text-magenta bg-magenta/10' 
-                    : 'border-white/5 text-white/10'
-                : selectedOption === opt 
-                  ? 'border-cyan text-cyan bg-cyan/10 shadow-[0_0_15px_rgba(0,217,255,0.1)]' 
-                  : 'border-white/10 text-white/50 hover:border-white/30 hover:bg-white/5'
-            }`}
-          >
-            <div className="relative z-10 flex justify-between items-center">
-              <span className="text-lg">{opt}</span>
-              {showResult && opt === q.correctAnswer && (
-                <span className="text-[10px] font-mono uppercase tracking-[0.2em] bg-lime/20 px-2 py-0.5 rounded">Verified</span>
-              )}
-              {showResult && selectedOption === opt && opt !== q.correctAnswer && (
-                <span className="text-[10px] font-mono uppercase tracking-[0.2em] bg-magenta/20 px-2 py-0.5 rounded">Error</span>
-              )}
-            </div>
-          </button>
-        ))}
-      </div>
-
+      {/* Explanation */}
       {showResult && (
-        <div className="mb-10 p-6 bg-dark/60 border border-white/10 rounded-lg animate-in slide-in-from-top-2">
-          <div className="text-[10px] font-mono text-cyan/50 uppercase mb-3 tracking-widest border-b border-white/5 pb-2">Nevral Analyse:</div>
-          <p className="text-white/80 text-base leading-relaxed italic">{q.explanation}</p>
+        <div
+          className="p-4 rounded-xl mb-4 text-sm leading-relaxed animate-fadeInUp"
+          style={{ background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.15)', color: 'var(--text-muted)' }}
+        >
+          <p className="font-bold text-xs mb-1" style={{ color: 'var(--secondary)' }}>💡 Forklaring</p>
+          {q.explanation}
         </div>
       )}
 
-      <div className="flex items-center gap-8">
-        <NeonButton 
-          variant={showResult ? (selectedOption === q.correctAnswer ? 'lime' : 'magenta') : 'cyan'} 
-          onClick={showResult ? handleNext : handleCheck}
-          className="min-w-[180px] py-3"
-          disabled={!selectedOption && !showResult}
+      {/* Hint */}
+      {hint && !showResult && (
+        <div
+          className="p-4 rounded-xl mb-4 text-sm animate-fadeInUp"
+          style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.2)', color: 'var(--text-muted)' }}
         >
-          {showResult ? localized.next : localized.check}
-        </NeonButton>
-        
+          <p className="font-bold text-xs mb-1" style={{ color: 'var(--accent)' }}>🤔 Hint</p>
+          {hint}
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={showResult ? handleNext : handleCheck}
+          disabled={!selected && !showResult}
+          className="btn-primary flex-1 py-3"
+        >
+          {showResult ? (currentIndex < questions.length - 1 ? 'Neste →' : 'Se resultat') : 'Sjekk svar'}
+        </button>
+
         {!showResult && hintsLeft > 0 && (
-          <button 
-            onClick={handleHint}
+          <button
+            onClick={getHint}
             disabled={hintLoading}
-            className="text-xs font-mono text-cyan/50 hover:text-cyan border-b border-cyan/20 hover:border-cyan tracking-widest uppercase disabled:opacity-30 transition-all"
+            className="btn-ghost px-3 py-3 text-xs flex items-center gap-1"
           >
-            {hintLoading ? 'LØSER_HINT...' : `HENT HINT (${hintsLeft}/3)`}
+            {hintLoading ? (
+              <span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+            ) : '💡'}
+            <span>Hint ({hintsLeft})</span>
           </button>
         )}
       </div>
-
-      {currentHint && !showResult && (
-        <div className="mt-8 p-5 bg-cyan/5 border border-cyan/20 rounded font-body text-base text-cyan/90 animate-in fade-in border-l-4">
-          <span className="text-[10px] font-mono block mb-2 opacity-50 uppercase tracking-[0.3em]">Hentet data:</span>
-          {currentHint}
-        </div>
-      )}
     </div>
   );
 };

@@ -15,7 +15,7 @@ const CATEGORIES = [
   'Reise', 'Kroppen', 'Hverdagslige Handlinger', 'Følelser', 'Natur'
 ];
 
-const VocabMode: React.FC<{ lang: SourceLang }> = ({ lang }) => {
+const VocabMode: React.FC<{ lang: SourceLang; onMasteredUpdate?: (words: string[]) => void }> = ({ lang, onMasteredUpdate }) => {
   const [words, setWords] = useState<VocabWord[]>([]);
   const [activeCategory, setActiveCategory] = useState(CATEGORIES[0]);
   const [loading, setLoading] = useState(false);
@@ -53,13 +53,16 @@ const VocabMode: React.FC<{ lang: SourceLang }> = ({ lang }) => {
       : [...masteredWords, word];
     
     setMasteredWords(newMastered);
-    
+
     // Oppdater global state i localStorage
     const savedUsers = JSON.parse(localStorage.getItem('cyberlingo_users') || '{}');
     if (savedUsers[currentUser]) {
       savedUsers[currentUser].masteredVocab = newMastered;
       localStorage.setItem('cyberlingo_users', JSON.stringify(savedUsers));
     }
+
+    // Notify parent for achievement tracking
+    onMasteredUpdate?.(newMastered);
   };
 
   const totalWordsLimit = 500;

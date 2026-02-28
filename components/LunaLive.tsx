@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
 import { SourceLang } from '../types';
+import { getStoredApiKey } from '../services/geminiService';
 import NeonButton from './NeonButton';
 
 interface LunaLiveProps {
@@ -48,7 +49,7 @@ const LunaLive: React.FC<LunaLiveProps> = ({ lang }) => {
   const startConnection = async () => {
     try {
       setError(null);
-      const ai = new GoogleGenAI({ apiKey: (process.env as any).API_KEY });
+      const ai = new GoogleGenAI({ apiKey: getStoredApiKey() });
       
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
       const inputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
