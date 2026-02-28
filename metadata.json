@@ -1,0 +1,8 @@
+{
+  "name": "CyberLingo: Spansk for Nordmenn",
+  "description": "En neon-cyberpunk språklæringsapp designet for å lære nordmenn spansk grammatikk, vokabular (500+ ord) og fraser (500+) lynraskt ved hjelp av AI.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
