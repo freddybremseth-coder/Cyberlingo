@@ -14,7 +14,7 @@ const AIAssistant: React.FC<{ lang?: SourceLang }> = ({ lang = 'no' }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const labels = {
+  const labels = ({
     no: {
       name: 'Luna',
       placeholder: 'Spør om spansk grammatikk, ord eller fraser...',
@@ -31,7 +31,30 @@ const AIAssistant: React.FC<{ lang?: SourceLang }> = ({ lang = 'no' }) => {
       assistant: 'Луна',
       welcome: 'Привет! Я Луна, ваш AI-учитель испанского. Задайте мне вопрос о грамматике, словах или фразах! 🌟',
     },
-  }[lang as SourceLang];
+    en: {
+      name: 'Luna',
+      placeholder: 'Ask about Spanish grammar, words or phrases...',
+      send: 'Send',
+      you: 'You',
+      assistant: 'Luna',
+      welcome: 'Hi! I\'m Luna, your AI Spanish teacher. Ask me anything about grammar, vocabulary, phrases or Spanish in general! 🌟',
+    },
+    de: {
+      name: 'Luna',
+      placeholder: 'Frag nach spanischer Grammatik, Wörtern oder Phrasen...',
+      send: 'Senden',
+      you: 'Du',
+      assistant: 'Luna',
+      welcome: 'Hallo! Ich bin Luna, deine KI-Spanischlehrerin. Frag mich alles über Grammatik, Wortschatz, Phrasen oder Spanisch allgemein! 🌟',
+    },
+  } as Record<string, { name: string; placeholder: string; send: string; you: string; assistant: string; welcome: string }>)[lang] ?? {
+    name: 'Luna',
+    placeholder: 'Ask about Spanish grammar, words or phrases...',
+    send: 'Send',
+    you: 'You',
+    assistant: 'Luna',
+    welcome: 'Hi! I\'m Luna, your AI Spanish teacher. Ask me anything about Spanish! 🌟',
+  };
 
   useEffect(() => {
     if (messages.length === 0) {

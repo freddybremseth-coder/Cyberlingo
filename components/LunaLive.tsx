@@ -70,7 +70,7 @@ const LunaLive: React.FC<LunaLiveProps> = ({ lang }) => {
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
-          systemInstruction: `Du er Luna, en AI-mentor for spansk. Snakk spansk med brukeren, men gi korte forklaringer på ${lang === 'no' ? 'norsk' : 'russisk'} hvis de gjør feil. Oppmuntre til samtale.`,
+          systemInstruction: `Du er Luna, en AI-mentor for spansk. Snakk spansk med brukeren, men gi korte forklaringer på ${{ no: 'norsk', ru: 'russisk', en: 'engelsk', de: 'tysk' }[lang] ?? 'engelsk'} hvis de gjør feil. Oppmuntre til samtale.`,
           inputAudioTranscription: {},
           outputAudioTranscription: {}
         },
@@ -187,7 +187,7 @@ const LunaLive: React.FC<LunaLiveProps> = ({ lang }) => {
     draw();
   };
 
-  const labels = {
+  const labels = ({
     no: {
       title: 'Neural Voice Link',
       sub: 'Luna sanntids-interaksjon',
@@ -196,7 +196,7 @@ const LunaLive: React.FC<LunaLiveProps> = ({ lang }) => {
       status: 'Status',
       online: 'SYNKRONISERT',
       offline: 'OFFLINE',
-      hint: 'Begynn å snakke spansk for å aktivere dekoding.'
+      hint: 'Begynn å snakke spansk for å aktivere dekoding.',
     },
     ru: {
       title: 'Голосовая связь',
@@ -206,9 +206,38 @@ const LunaLive: React.FC<LunaLiveProps> = ({ lang }) => {
       status: 'Статус',
       online: 'СИНХРОНИЗИРОВАНО',
       offline: 'ОФФЛАЙН',
-      hint: 'Начните говорить по-испански для активации декодирования.'
-    }
-  }[lang];
+      hint: 'Начните говорить по-испански для активации декодирования.',
+    },
+    en: {
+      title: 'Neural Voice Link',
+      sub: 'Luna real-time interaction',
+      connect: 'Establish Link',
+      disconnect: 'Disconnect',
+      status: 'Status',
+      online: 'SYNCHRONISED',
+      offline: 'OFFLINE',
+      hint: 'Start speaking Spanish to activate decoding.',
+    },
+    de: {
+      title: 'Neuraler Sprach-Link',
+      sub: 'Luna Echtzeit-Interaktion',
+      connect: 'Verbindung herstellen',
+      disconnect: 'Trennen',
+      status: 'Status',
+      online: 'SYNCHRONISIERT',
+      offline: 'OFFLINE',
+      hint: 'Beginne Spanisch zu sprechen, um die Dekodierung zu aktivieren.',
+    },
+  } as Record<string, { title: string; sub: string; connect: string; disconnect: string; status: string; online: string; offline: string; hint: string }>)[lang] ?? {
+    title: 'Neural Voice Link',
+    sub: 'Luna real-time interaction',
+    connect: 'Establish Link',
+    disconnect: 'Disconnect',
+    status: 'Status',
+    online: 'SYNCHRONISED',
+    offline: 'OFFLINE',
+    hint: 'Start speaking Spanish to activate decoding.',
+  };
 
   const storedKey = getStoredApiKey();
   if (storedKey && detectProvider(storedKey) !== 'gemini') {

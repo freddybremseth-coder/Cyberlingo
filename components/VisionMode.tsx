@@ -23,7 +23,7 @@ const VisionMode: React.FC<{ lang: SourceLang }> = ({ lang }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  const labels = {
+  const labels = ({
     no: {
       title: 'Vision Link',
       sub: 'Nevral gjenkjenning av omgivelser',
@@ -35,7 +35,7 @@ const VisionMode: React.FC<{ lang: SourceLang }> = ({ lang }) => {
       error: 'Systemfeil',
       waiting: 'Venter på visuell input...',
       stop: 'Koble fra',
-      retry: 'Prøv Igjen'
+      retry: 'Prøv Igjen',
     },
     ru: {
       title: 'Vision Link',
@@ -48,9 +48,47 @@ const VisionMode: React.FC<{ lang: SourceLang }> = ({ lang }) => {
       error: 'Ошибка системы',
       waiting: 'Ожидание визуальных данных...',
       stop: 'Отключить',
-      retry: 'Повторить'
-    }
-  }[lang];
+      retry: 'Повторить',
+    },
+    en: {
+      title: 'Vision Link',
+      sub: 'Neural environment recognition',
+      activate: 'Activate Camera',
+      capture: 'Scan Environment',
+      loading: 'Decoding visual data...',
+      example: 'Example',
+      pronunciation: 'Pronunciation',
+      error: 'System error',
+      waiting: 'Waiting for visual input...',
+      stop: 'Disconnect',
+      retry: 'Try Again',
+    },
+    de: {
+      title: 'Vision Link',
+      sub: 'Neuronale Umgebungserkennung',
+      activate: 'Kamera aktivieren',
+      capture: 'Umgebung scannen',
+      loading: 'Visuelle Daten dekodieren...',
+      example: 'Beispiel',
+      pronunciation: 'Aussprache',
+      error: 'Systemfehler',
+      waiting: 'Warte auf visuelle Eingabe...',
+      stop: 'Trennen',
+      retry: 'Erneut versuchen',
+    },
+  } as Record<string, { title: string; sub: string; activate: string; capture: string; loading: string; example: string; pronunciation: string; error: string; waiting: string; stop: string; retry: string }>)[lang] ?? {
+    title: 'Vision Link',
+    sub: 'Neural environment recognition',
+    activate: 'Activate Camera',
+    capture: 'Scan Environment',
+    loading: 'Decoding visual data...',
+    example: 'Example',
+    pronunciation: 'Pronunciation',
+    error: 'System error',
+    waiting: 'Waiting for visual input...',
+    stop: 'Disconnect',
+    retry: 'Try Again',
+  };
 
   const stopCamera = () => {
     if (streamRef.current) {
