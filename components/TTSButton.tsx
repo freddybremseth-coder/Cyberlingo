@@ -15,8 +15,13 @@ const TTSButton: React.FC<TTSButtonProps> = ({ text, className = '', size = 'md'
     e.stopPropagation();
     if (loading) return;
     setLoading(true);
-    await generateSpeech(text);
-    setLoading(false);
+    try {
+      await generateSpeech(text);
+    } catch (err) {
+      console.error('TTS failed:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const sizeClasses = size === 'sm' ? 'w-6 h-6' : 'w-8 h-8';

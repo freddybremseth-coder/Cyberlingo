@@ -26,6 +26,7 @@ const PhraseMode: React.FC<{ lang: SourceLang }> = ({ lang }) => {
   const [phrases, setPhrases] = useState<Phrase[]>([]);
   const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].id);
   const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [masteredPhrases, setMasteredPhrases] = useState<string[]>(() => {
     const saved = localStorage.getItem('cyberlingo_phrases');
     return saved ? JSON.parse(saved) : [];
@@ -37,11 +38,13 @@ const PhraseMode: React.FC<{ lang: SourceLang }> = ({ lang }) => {
 
   const fetchBatch = async () => {
     setLoading(true);
+    setFetchError(null);
     try {
       const data = await getPhraseBatch(activeCategory, lang);
+      if (!Array.isArray(data) || data.length === 0) throw new Error('Ingen fraser mottatt');
       setPhrases(data);
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      setFetchError(e?.message || 'Kunne ikke hente fraser. Sjekk API-nøkkelen og prøv igjen.');
     } finally {
       setLoading(false);
     }
@@ -114,6 +117,11 @@ const PhraseMode: React.FC<{ lang: SourceLang }> = ({ lang }) => {
             style={{ borderColor: 'var(--accent) transparent transparent transparent' }}
           />
           <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>{labels.loading}</p>
+        </div>
+      ) : fetchError ? (
+        <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+          <p className="text-sm" style={{ color: 'var(--danger)' }}>⚠️ {fetchError}</p>
+          <button onClick={fetchBatch} className="btn-ghost px-4 py-2 text-sm">Prøv igjen</button>
         </div>
       ) : (
         <div className="space-y-3">

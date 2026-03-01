@@ -23,27 +23,30 @@ const QuizComponent: React.FC<Props> = ({ topic, lang = 'no', onMastered }) => {
   const [hintsLeft, setHintsLeft] = useState(3);
   const [hint, setHint] = useState<string | null>(null);
   const [hintLoading, setHintLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => { reset(); }, [topic, lang]);
 
   const reset = () => {
     setQuestions([]); setCurrentIndex(0); setScore(0); setWrongCount(0);
     setSelected(null); setShowResult(false); setHintsLeft(3); setHint(null);
-    setIsActive(false); setIsFinished(false);
+    setIsActive(false); setIsFinished(false); setError(null);
   };
 
   const startQuiz = async (level: number) => {
     setLoading(true);
     setCurrentLevel(level);
+    setError(null);
     try {
       const quiz = await generateQuiz(topic, 5, level, lang);
+      if (!quiz || quiz.length === 0) throw new Error('Ingen spørsmål returnert');
       setQuestions(quiz);
       setCurrentIndex(0); setScore(0); setWrongCount(0);
       setSelected(null); setShowResult(false);
       setHintsLeft(3); setHint(null);
       setIsActive(true); setIsFinished(false);
-    } catch {
-      // failed to load
+    } catch (e: any) {
+      setError(e?.message || 'Kunne ikke laste quiz. Sjekk API-nøkkelen og prøv igjen.');
     } finally {
       setLoading(false);
     }
@@ -170,6 +173,14 @@ const QuizComponent: React.FC<Props> = ({ topic, lang = 'no', onMastered }) => {
         <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
           Velg et nivå. Du må svare 100% riktig for å gå videre.
         </p>
+        {error && (
+          <div
+            className="p-3 rounded-xl mb-4 text-sm"
+            style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)', color: 'var(--danger)' }}
+          >
+            ⚠️ {error}
+          </div>
+        )}
         <div className="grid grid-cols-5 gap-2">
           {Array.from({ length: 10 }, (_, i) => i + 1).map(lvl => {
             const unlocked = lvl <= unlockedLevel;

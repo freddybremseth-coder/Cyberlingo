@@ -42,17 +42,20 @@ const NeuralDecoder: React.FC<NeuralDecoderProps> = ({
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [activeWord, setActiveWord] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleDecode = async () => {
     if (!input.trim() || loading) return;
     setLoading(true);
     setResult(null);
     setActiveWord(null);
+    setError(null);
     try {
       const data = await analyzeSentence(input, lang as SourceLang);
+      if (!data || !data.breakdown) throw new Error('Ugyldig svar fra AI');
       setResult(data);
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      setError(e?.message || 'Analyse feilet. Sjekk API-nøkkelen og prøv igjen.');
     } finally {
       setLoading(false);
     }
@@ -118,6 +121,16 @@ const NeuralDecoder: React.FC<NeuralDecoderProps> = ({
             style={{ borderColor: 'var(--secondary) transparent transparent transparent' }}
           />
           <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{labels.loading}</p>
+        </div>
+      )}
+
+      {/* Error */}
+      {error && !loading && (
+        <div
+          className="p-3 rounded-xl text-sm"
+          style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)', color: 'var(--danger)' }}
+        >
+          ⚠️ {error}
         </div>
       )}
 

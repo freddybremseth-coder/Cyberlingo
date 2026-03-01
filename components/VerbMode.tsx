@@ -55,6 +55,7 @@ const VerbMode: React.FC<VerbModeProps> = ({ lang = 'no' }) => {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [verbData, setVerbData] = useState<VerbData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [verbError, setVerbError] = useState<string | null>(null);
 
   const filteredVerbs = useMemo(() => {
     if (activeFilter === 'all') return VERB_LIST;
@@ -65,11 +66,13 @@ const VerbMode: React.FC<VerbModeProps> = ({ lang = 'no' }) => {
     setSelectedVerb(verb);
     setLoading(true);
     setVerbData(null);
+    setVerbError(null);
     try {
       const data = await getVerbDetails(verb, lang as SourceLang);
+      if (!data || !data.infinitive) throw new Error('Ugyldig svar fra AI');
       setVerbData(data);
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      setVerbError(e?.message || 'Kunne ikke hente verbdata. Sjekk API-nøkkelen og prøv igjen.');
     } finally {
       setLoading(false);
     }
@@ -178,6 +181,15 @@ const VerbMode: React.FC<VerbModeProps> = ({ lang = 'no' }) => {
             style={{ borderColor: 'var(--warning) transparent transparent transparent' }}
           />
           <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>{labels.loading}</p>
+        </div>
+      )}
+
+      {verbError && !loading && (
+        <div
+          className="p-3 rounded-xl text-sm"
+          style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)', color: 'var(--danger)' }}
+        >
+          ⚠️ {verbError}
         </div>
       )}
 

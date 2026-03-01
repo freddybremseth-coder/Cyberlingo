@@ -62,7 +62,7 @@ const LunaLive: React.FC<LunaLiveProps> = ({ lang }) => {
       const analyzer = inputCtx.createAnalyser();
       analyzer.fftSize = 256;
       source.connect(analyzer);
-      analyzerRef.ref = analyzer;
+      analyzerRef.current = analyzer;
       drawVisualizer();
 
       const sessionPromise = ai.live.connect({
@@ -140,10 +140,10 @@ const LunaLive: React.FC<LunaLiveProps> = ({ lang }) => {
   };
 
   const drawVisualizer = () => {
-    if (!canvasRef.current || !analyzerRef.ref) return;
+    if (!canvasRef.current || !analyzerRef.current) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    const analyzer = analyzerRef.ref;
+    const analyzer = analyzerRef.current;
     const bufferLength = analyzer.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
 

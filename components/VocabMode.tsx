@@ -31,6 +31,7 @@ const VocabMode: React.FC<{ lang: SourceLang; onMasteredUpdate?: (words: string[
   const [words, setWords] = useState<VocabWord[]>([]);
   const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].id);
   const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const currentUser = localStorage.getItem('cyberlingo_current_user') || 'default';
 
@@ -46,11 +47,13 @@ const VocabMode: React.FC<{ lang: SourceLang; onMasteredUpdate?: (words: string[
   const fetchBatch = async () => {
     setLoading(true);
     setWords([]);
+    setFetchError(null);
     try {
       const data = await getVocabBatch(activeCategory, lang);
+      if (!Array.isArray(data) || data.length === 0) throw new Error('Ingen ord mottatt');
       setWords(data);
-    } catch (e) {
-      console.error('Failed to fetch vocab batch:', e);
+    } catch (e: any) {
+      setFetchError(e?.message || 'Kunne ikke hente ordforråd. Sjekk API-nøkkelen og prøv igjen.');
     } finally {
       setLoading(false);
     }
@@ -131,6 +134,11 @@ const VocabMode: React.FC<{ lang: SourceLang; onMasteredUpdate?: (words: string[
             style={{ borderColor: `var(--primary) transparent transparent transparent` }}
           />
           <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>{labels.loading}</p>
+        </div>
+      ) : fetchError ? (
+        <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+          <p className="text-sm" style={{ color: 'var(--danger)' }}>⚠️ {fetchError}</p>
+          <button onClick={fetchBatch} className="btn-ghost px-4 py-2 text-sm">Prøv igjen</button>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
