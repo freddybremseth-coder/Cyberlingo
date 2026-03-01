@@ -217,7 +217,9 @@ const AuthScreen: React.FC<Props> = ({ onLogin }) => {
             <div className="grid grid-cols-2 gap-3">
               {([
                 { value: 'no', flag: '🇳🇴', label: 'Norsk' },
-                { value: 'ru', flag: '🇷🇺', label: 'Russisk' },
+                { value: 'en', flag: '🇬🇧', label: 'English' },
+                { value: 'de', flag: '🇩🇪', label: 'Deutsch' },
+                { value: 'ru', flag: '🇷🇺', label: 'Русский' },
               ] as { value: SourceLang; flag: string; label: string }[]).map(l => (
                 <button
                   key={l.value}
