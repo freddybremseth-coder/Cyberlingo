@@ -78,26 +78,12 @@ const VerbMode: React.FC<VerbModeProps> = ({ lang = 'no' }) => {
     }
   };
 
-  const labels = {
-    no: {
-      title: 'Verbtrening',
-      sub: '25 essensielle spanske verb',
-      filterAll: 'Alle',
-      filterIrreg: 'Uregelrett',
-      loading: 'Henter verbdata...',
-      conjugation: 'Bøyning',
-      analysis: 'Setningsanalyse',
-    },
-    ru: {
-      title: 'Тренировка глаголов',
-      sub: '25 ключевых испанских глаголов',
-      filterAll: 'Все',
-      filterIrreg: 'Неправильные',
-      loading: 'Загрузка...',
-      conjugation: 'Спряжение',
-      analysis: 'Анализ предложений',
-    },
-  }[lang as SourceLang];
+  const labels = ({
+    no: { title: 'Verbtrening', sub: '25 essensielle spanske verb', filterAll: 'Alle', filterIrreg: 'Uregelrett', loading: 'Henter verbdata...', conjugation: 'Bøyning', analysis: 'Setningsanalyse' },
+    ru: { title: 'Тренировка глаголов', sub: '25 ключевых испанских глаголов', filterAll: 'Все', filterIrreg: 'Неправильные', loading: 'Загрузка...', conjugation: 'Спряжение', analysis: 'Анализ предложений' },
+    en: { title: 'Verb Training', sub: '25 essential Spanish verbs', filterAll: 'All', filterIrreg: 'Irregular', loading: 'Loading verb data...', conjugation: 'Conjugation', analysis: 'Sentence Analysis' },
+    de: { title: 'Verbtraining', sub: '25 wesentliche spanische Verben', filterAll: 'Alle', filterIrreg: 'Unregelmäßig', loading: 'Verbdaten laden...', conjugation: 'Konjugation', analysis: 'Satzanalyse' },
+  } as Record<string, { title: string; sub: string; filterAll: string; filterIrreg: string; loading: string; conjugation: string; analysis: string }>)[lang] ?? { title: 'Verb Training', sub: '25 essential Spanish verbs', filterAll: 'All', filterIrreg: 'Irregular', loading: 'Loading...', conjugation: 'Conjugation', analysis: 'Sentence Analysis' };
 
   const filters: { id: FilterType; label: string }[] = [
     { id: 'all', label: labels.filterAll },

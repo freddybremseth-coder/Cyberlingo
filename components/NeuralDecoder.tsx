@@ -61,26 +61,12 @@ const NeuralDecoder: React.FC<NeuralDecoderProps> = ({
     }
   };
 
-  const labels = {
-    no: {
-      title: 'Setningsanalyse',
-      placeholder: 'Skriv en spansk setning...',
-      action: 'Analyser',
-      loading: 'Analyserer...',
-      idiomatic: 'Norsk oversettelse',
-      literal: 'Bokstavelig oversettelse',
-      breakdown: 'Grammatisk nedbrytning',
-    },
-    ru: {
-      title: 'Анализ предложений',
-      placeholder: 'Введите испанское предложение...',
-      action: 'Анализ',
-      loading: 'Анализируем...',
-      idiomatic: 'Перевод',
-      literal: 'Дословный перевод',
-      breakdown: 'Грамматика',
-    },
-  }[lang as SourceLang];
+  const labels = ({
+    no: { title: 'Setningsanalyse', placeholder: 'Skriv en spansk setning...', action: 'Analyser', loading: 'Analyserer...', idiomatic: 'Norsk oversettelse', literal: 'Bokstavelig oversettelse', breakdown: 'Grammatisk nedbrytning', wordHint: 'Trykk på et ord for detaljer' },
+    ru: { title: 'Анализ предложений', placeholder: 'Введите испанское предложение...', action: 'Анализ', loading: 'Анализируем...', idiomatic: 'Перевод', literal: 'Дословный перевод', breakdown: 'Грамматика', wordHint: 'Нажмите на слово для подробностей' },
+    en: { title: 'Sentence Analysis', placeholder: 'Type a Spanish sentence...', action: 'Analyse', loading: 'Analysing...', idiomatic: 'English translation', literal: 'Literal translation', breakdown: 'Grammar breakdown', wordHint: 'Tap a word for details' },
+    de: { title: 'Satzanalyse', placeholder: 'Spanischen Satz eingeben...', action: 'Analysieren', loading: 'Analysiere...', idiomatic: 'Deutsche Übersetzung', literal: 'Wörtliche Übersetzung', breakdown: 'Grammatikanalyse', wordHint: 'Auf ein Wort tippen für Details' },
+  } as Record<string, { title: string; placeholder: string; action: string; loading: string; idiomatic: string; literal: string; breakdown: string; wordHint: string }>)[lang as string] ?? { title: 'Sentence Analysis', placeholder: 'Type a Spanish sentence...', action: 'Analyse', loading: 'Analysing...', idiomatic: 'Translation', literal: 'Literal translation', breakdown: 'Grammar', wordHint: 'Tap a word for details' };
 
   return (
     <div
@@ -211,7 +197,7 @@ const NeuralDecoder: React.FC<NeuralDecoderProps> = ({
             </div>
             {activeWord === null && (
               <p className="text-xs mt-2" style={{ color: 'var(--text-faint)' }}>
-                Trykk på et ord for detaljer
+                {labels.wordHint}
               </p>
             )}
           </div>
