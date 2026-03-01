@@ -20,11 +20,11 @@ const CATEGORIES = [
   { id: 'Home', icon: '🏠' },
   { id: 'Work', icon: '💼' },
   { id: 'Emotions', icon: '😊' },
-  { id: 'Reise', icon: '🗺️' },
-  { id: 'Kroppen', icon: '🫁' },
-  { id: 'Hverdagslige Handlinger', icon: '🔄' },
-  { id: 'Følelser', icon: '💭' },
-  { id: 'Natur', icon: '🌿' },
+  { id: 'The Body', icon: '🫁' },
+  { id: 'Daily Actions', icon: '🔄' },
+  { id: 'Nature', icon: '🌿' },
+  { id: 'Health', icon: '🏥' },
+  { id: 'School & Study', icon: '📚' },
 ];
 
 const VocabMode: React.FC<{ lang: SourceLang; onMasteredUpdate?: (words: string[]) => void }> = ({ lang, onMasteredUpdate }) => {
@@ -78,10 +78,12 @@ const VocabMode: React.FC<{ lang: SourceLang; onMasteredUpdate?: (words: string[
   const totalWordsLimit = 500;
   const progress = Math.min(100, Math.round((masteredWords.length / totalWordsLimit) * 100));
 
-  const labels = {
-    no: { title: 'Vokabular', sub: '500 essensielle spanske ord', mastered: 'Lært', loading: 'Henter ord...' },
-    ru: { title: 'Словарь', sub: '500 базовых испанских слов', mastered: 'Изучено', loading: 'Загрузка...' },
-  }[lang];
+  const labels = ({
+    no: { title: 'Vokabular', sub: '500 essensielle spanske ord', progress: 'Ord lært', loading: 'Henter ord...' },
+    ru: { title: 'Словарь', sub: '500 базовых испанских слов', progress: 'Слов изучено', loading: 'Загрузка...' },
+    en: { title: 'Vocabulary', sub: '500 essential Spanish words', progress: 'Words learned', loading: 'Loading words...' },
+    de: { title: 'Vokabular', sub: '500 wesentliche spanische Wörter', progress: 'Wörter gelernt', loading: 'Wörter laden...' },
+  } as Record<string, { title: string; sub: string; progress: string; loading: string }>)[lang] ?? { title: 'Vocabulary', sub: '500 essential Spanish words', progress: 'Words learned', loading: 'Loading...' };
 
   const activeCat = CATEGORIES.find(c => c.id === activeCategory);
 
@@ -99,7 +101,7 @@ const VocabMode: React.FC<{ lang: SourceLang; onMasteredUpdate?: (words: string[
         style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
       >
         <div className="flex justify-between items-center mb-2">
-          <span className="text-sm font-semibold">Ord lært</span>
+          <span className="text-sm font-semibold">{labels.progress}</span>
           <span className="badge badge-primary text-xs">{masteredWords.length} / {totalWordsLimit}</span>
         </div>
         <div className="progress-track">

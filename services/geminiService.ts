@@ -58,6 +58,19 @@ const stripJSON = (text: string): string => {
   return (fenced ? fenced[1] : text).trim();
 };
 
+/**
+ * Robustly extract an array from a parsed JSON value.
+ * Handles: direct array, object wrapping (any key), or empty fallback.
+ */
+const extractArray = (parsed: unknown): unknown[] => {
+  if (Array.isArray(parsed)) return parsed;
+  if (parsed && typeof parsed === 'object') {
+    const arr = Object.values(parsed as Record<string, unknown>).find(v => Array.isArray(v));
+    if (arr) return arr as unknown[];
+  }
+  return [];
+};
+
 /** Generate plain text with any provider */
 const callText = async (systemPrompt: string, userPrompt: string, temp = 0.7): Promise<string> => {
   const key = getStoredApiKey();
@@ -116,11 +129,10 @@ const callJSON = async (systemPrompt: string, userPrompt: string): Promise<strin
     return stripJSON(data.content[0].text);
   }
 
-  // OpenAI JSON mode
+  // OpenAI – no json_object mode so arrays can be returned directly
   const resp = await openaiPost(key, {
     model: 'gpt-4o-mini',
     max_tokens: 2048,
-    response_format: { type: 'json_object' },
     messages: [
       { role: 'system', content: sys },
       { role: 'user', content: userPrompt },
@@ -248,7 +260,7 @@ export const generateSpeech = async (text: string): Promise<void> => {
 export const analyzeVision = async (base64Image: string, lang: SourceLang = 'no') => {
   const key = getStoredApiKey();
   const provider = detectProvider(key);
-  const langLabel = lang === 'no' ? 'Norwegian' : 'Russian';
+  const langLabel = ({ no: 'Norwegian', ru: 'Russian', en: 'English', de: 'German' } as Record<string, string>)[lang] ?? 'English';
   const promptText = `Identify the main objects in this image. For each object provide: Spanish word (with article), ${langLabel} translation, a short useful Spanish sentence using that word, and pronunciation guide. Max 5 objects.`;
 
   if (provider === 'gemini') {
@@ -285,7 +297,6 @@ export const analyzeVision = async (base64Image: string, lang: SourceLang = 'no'
     const resp = await openaiPost(key, {
       model: 'gpt-4o',
       max_tokens: 1024,
-      response_format: { type: 'json_object' },
       messages: [{
         role: 'user',
         content: [
@@ -295,8 +306,7 @@ export const analyzeVision = async (base64Image: string, lang: SourceLang = 'no'
       }],
     });
     const data = await resp.json();
-    const parsed = JSON.parse(stripJSON(data.choices[0].message.content));
-    return Array.isArray(parsed) ? parsed : (parsed.objects || parsed.items || []);
+    return extractArray(JSON.parse(stripJSON(data.choices[0].message.content)));
   }
 
   // Claude vision
@@ -319,7 +329,7 @@ export const analyzeVision = async (base64Image: string, lang: SourceLang = 'no'
 
 // ─── Grammar explanation ───────────────────────────────────────────────────
 export const getGrammarExplanation = async (topic: string, query: string, lang: SourceLang = 'no') => {
-  const langLabel = lang === 'no' ? 'Norwegian' : 'Russian';
+  const langLabel = ({ no: 'Norwegian', ru: 'Russian', en: 'English', de: 'German' } as Record<string, string>)[lang] ?? 'English';
   return callText(
     `You are an expert, encouraging Spanish teacher for ${langLabel}-speaking students. Focus on practical usage. Use simple language. Always give real-world examples.`,
     `Explain the following about ${topic} in Spanish: ${query}. Use ${langLabel} for all explanations. Be concise, practical, and include examples.`,
@@ -331,7 +341,7 @@ export const getGrammarExplanation = async (topic: string, query: string, lang: 
 export const analyzeSentence = async (sentence: string, lang: SourceLang = 'no') => {
   const key = getStoredApiKey();
   const provider = detectProvider(key);
-  const langLabel = lang === 'no' ? 'Norwegian' : 'Russian';
+  const langLabel = ({ no: 'Norwegian', ru: 'Russian', en: 'English', de: 'German' } as Record<string, string>)[lang] ?? 'English';
 
   if (provider === 'gemini') {
     const response = await getAI().models.generateContent({
@@ -373,7 +383,7 @@ export const analyzeSentence = async (sentence: string, lang: SourceLang = 'no')
 export const generateQuiz = async (topic: string, count = 5, level = 1, lang: SourceLang = 'no') => {
   const key = getStoredApiKey();
   const provider = detectProvider(key);
-  const langLabel = lang === 'no' ? 'Norwegian' : 'Russian';
+  const langLabel = ({ no: 'Norwegian', ru: 'Russian', en: 'English', de: 'German' } as Record<string, string>)[lang] ?? 'English';
   const prompt = `Generate ${count} multiple-choice questions about "${topic}" in Spanish for a ${langLabel}-speaking student at level ${level}/3. Make questions practical and test real understanding, not just memorisation.`;
 
   if (provider === 'gemini') {
@@ -402,17 +412,16 @@ export const generateQuiz = async (topic: string, count = 5, level = 1, lang: So
 
   const text = await callJSON(
     `You are a Spanish teacher. Generate quiz questions. Use ${langLabel} for explanations.`,
-    prompt + ` Return JSON array: [{"question":"...","options":["A","B","C","D"],"correctAnswer":"correct option text","explanation":"${langLabel} explanation"}]`,
+    prompt + ` Return a JSON array: [{"question":"...","options":["A","B","C","D"],"correctAnswer":"correct option text","explanation":"${langLabel} explanation"}]`,
   );
-  const parsed = JSON.parse(stripJSON(text));
-  return Array.isArray(parsed) ? parsed : (parsed.questions || []);
+  return extractArray(JSON.parse(stripJSON(text)));
 };
 
 // ─── Verb details ──────────────────────────────────────────────────────────
 export const getVerbDetails = async (verb: string, lang: SourceLang = 'no') => {
   const key = getStoredApiKey();
   const provider = detectProvider(key);
-  const langLabel = lang === 'no' ? 'Norwegian' : 'Russian';
+  const langLabel = ({ no: 'Norwegian', ru: 'Russian', en: 'English', de: 'German' } as Record<string, string>)[lang] ?? 'English';
   const prompt = `Provide full conjugations for the Spanish verb "${verb}" in present, preterite, and imperfect tenses. Include ${langLabel} meaning.`;
 
   if (provider === 'gemini') {
@@ -459,7 +468,7 @@ export const getVerbDetails = async (verb: string, lang: SourceLang = 'no') => {
 export const getVerbSentenceExamples = async (verb: string, lang: SourceLang = 'no') => {
   const key = getStoredApiKey();
   const provider = detectProvider(key);
-  const langLabel = lang === 'no' ? 'Norwegian' : 'Russian';
+  const langLabel = ({ no: 'Norwegian', ru: 'Russian', en: 'English', de: 'German' } as Record<string, string>)[lang] ?? 'English';
   const prompt = `Generate 3 natural, diverse Spanish example sentences using the verb "${verb}". Include ${langLabel} translations. Use different tenses.`;
 
   if (provider === 'gemini') {
@@ -485,17 +494,16 @@ export const getVerbSentenceExamples = async (verb: string, lang: SourceLang = '
 
   const text = await callJSON(
     'You are a Spanish teacher.',
-    prompt + ' Return JSON array: [{"spanish":"...","translation":"..."}]',
+    prompt + ' Return a JSON array: [{"spanish":"...","translation":"..."}]',
   );
-  const parsed = JSON.parse(stripJSON(text));
-  return Array.isArray(parsed) ? parsed : (parsed.sentences || parsed.examples || []);
+  return extractArray(JSON.parse(stripJSON(text)));
 };
 
 // ─── Vocabulary batch ──────────────────────────────────────────────────────
 export const getVocabBatch = async (category: string, lang: SourceLang = 'no') => {
   const key = getStoredApiKey();
   const provider = detectProvider(key);
-  const langLabel = lang === 'no' ? 'Norwegian' : 'Russian';
+  const langLabel = ({ no: 'Norwegian', ru: 'Russian', en: 'English', de: 'German' } as Record<string, string>)[lang] ?? 'English';
   const prompt = `Provide exactly 50 of the most important, high-frequency Spanish words for the category: "${category}". Include ${langLabel} translation and clear pronunciation guide. Prioritise words that appear most in everyday conversation.`;
 
   if (provider === 'gemini') {
@@ -523,17 +531,16 @@ export const getVocabBatch = async (category: string, lang: SourceLang = 'no') =
 
   const text = await callJSON(
     'You are a Spanish vocabulary expert.',
-    prompt + ' Return JSON array of exactly 50 items: [{"spanish":"...","translation":"...","pronunciation":"phonetic guide"}]',
+    prompt + ' Return a JSON array of exactly 50 items: [{"spanish":"...","translation":"...","pronunciation":"phonetic guide"}]',
   );
-  const parsed = JSON.parse(stripJSON(text));
-  return Array.isArray(parsed) ? parsed : (parsed.words || parsed.vocabulary || []);
+  return extractArray(JSON.parse(stripJSON(text)));
 };
 
 // ─── Phrase batch ──────────────────────────────────────────────────────────
 export const getPhraseBatch = async (category: string, lang: SourceLang = 'no') => {
   const key = getStoredApiKey();
   const provider = detectProvider(key);
-  const langLabel = lang === 'no' ? 'Norwegian' : 'Russian';
+  const langLabel = ({ no: 'Norwegian', ru: 'Russian', en: 'English', de: 'German' } as Record<string, string>)[lang] ?? 'English';
   const prompt = `Provide exactly 50 extremely useful, natural Spanish phrases for the category: "${category}". Include ${langLabel} translation and practical usage context. Focus on phrases native speakers actually use.`;
 
   if (provider === 'gemini') {
@@ -561,10 +568,9 @@ export const getPhraseBatch = async (category: string, lang: SourceLang = 'no') 
 
   const text = await callJSON(
     'You are a Spanish language expert.',
-    prompt + ' Return JSON array of exactly 50 items: [{"spanish":"...","translation":"...","context":"when/how to use this phrase"}]',
+    prompt + ' Return a JSON array of exactly 50 items: [{"spanish":"...","translation":"...","context":"when/how to use this phrase"}]',
   );
-  const parsed = JSON.parse(stripJSON(text));
-  return Array.isArray(parsed) ? parsed : (parsed.phrases || []);
+  return extractArray(JSON.parse(stripJSON(text)));
 };
 
 // ─── Conversation practice ─────────────────────────────────────────────────
@@ -576,7 +582,7 @@ export const generateConversationResponse = async (
 ): Promise<string> => {
   const key = getStoredApiKey();
   const provider = detectProvider(key);
-  const langLabel = lang === 'no' ? 'Norwegian' : 'Russian';
+  const langLabel = ({ no: 'Norwegian', ru: 'Russian', en: 'English', de: 'German' } as Record<string, string>)[lang] ?? 'English';
   const systemInstruction = `${systemContext}
 
 IMPORTANT: Always respond primarily in Spanish.
@@ -631,7 +637,7 @@ Keep your response to 2-3 sentences maximum. Be encouraging.`;
 
 // ─── Pronunciation feedback ────────────────────────────────────────────────
 export const getPronunciationTips = async (word: string, lang: SourceLang = 'no'): Promise<string> => {
-  const langLabel = lang === 'no' ? 'Norwegian' : 'Russian';
+  const langLabel = ({ no: 'Norwegian', ru: 'Russian', en: 'English', de: 'German' } as Record<string, string>)[lang] ?? 'English';
   return callText(
     `You are a Spanish pronunciation expert for ${langLabel} speakers.`,
     `Give practical pronunciation tips for the Spanish word/phrase: "${word}". Explain in ${langLabel} how to pronounce it, what sounds are tricky for ${langLabel} speakers, and give a simple phonetic breakdown. Be concise and practical.`,
@@ -645,7 +651,7 @@ export const getDailyWord = async (lang: SourceLang = 'no'): Promise<{
 }> => {
   const key = getStoredApiKey();
   const provider = detectProvider(key);
-  const langLabel = lang === 'no' ? 'Norwegian' : 'Russian';
+  const langLabel = ({ no: 'Norwegian', ru: 'Russian', en: 'English', de: 'German' } as Record<string, string>)[lang] ?? 'English';
   const prompt = `Give me one useful, intermediate-level Spanish word for today's vocabulary focus. Include ${langLabel} translation, a natural example sentence, and pronunciation.`;
 
   if (provider === 'gemini') {

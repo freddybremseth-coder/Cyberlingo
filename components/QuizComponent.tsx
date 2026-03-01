@@ -89,7 +89,7 @@ const QuizComponent: React.FC<Props> = ({ topic, lang = 'no', onMastered }) => {
     try {
       const h = await getGrammarExplanation(
         topic,
-        `Question: "${questions[currentIndex].question}". Give a brief hint in ${lang === 'no' ? 'Norwegian' : 'Russian'}.`,
+        `Question: "${questions[currentIndex].question}". Give a brief hint in ${{ no: 'Norwegian', ru: 'Russian', en: 'English', de: 'German' }[lang] ?? 'English'}.`,
         lang
       );
       setHint(h);

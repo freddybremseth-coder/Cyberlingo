@@ -60,10 +60,12 @@ const PhraseMode: React.FC<{ lang: SourceLang }> = ({ lang }) => {
 
   const progress = Math.min(100, Math.round((masteredPhrases.length / 500) * 100));
 
-  const labels = {
-    no: { title: 'Fraser', sub: '500 essensielle hverdagsfraser', context: 'Kontekst', loading: 'Henter fraser...' },
-    ru: { title: 'Фразы', sub: '500 важных испанских фраз', context: 'Контекст', loading: 'Загрузка...' },
-  }[lang];
+  const labels = ({
+    no: { title: 'Fraser', sub: '500 essensielle hverdagsfraser', progress: 'Fraser lært', loading: 'Henter fraser...' },
+    ru: { title: 'Фразы', sub: '500 важных испанских фраз', progress: 'Фраз изучено', loading: 'Загрузка...' },
+    en: { title: 'Phrases', sub: '500 essential everyday phrases', progress: 'Phrases learned', loading: 'Loading phrases...' },
+    de: { title: 'Phrasen', sub: '500 wesentliche Alltagsphrasen', progress: 'Phrasen gelernt', loading: 'Phrasen laden...' },
+  } as Record<string, { title: string; sub: string; progress: string; loading: string }>)[lang] ?? { title: 'Phrases', sub: '500 essential phrases', progress: 'Phrases learned', loading: 'Loading...' };
 
   return (
     <div className="animate-fadeIn space-y-5">
@@ -79,7 +81,7 @@ const PhraseMode: React.FC<{ lang: SourceLang }> = ({ lang }) => {
         style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
       >
         <div className="flex justify-between items-center mb-2">
-          <span className="text-sm font-semibold">Fraser lært</span>
+          <span className="text-sm font-semibold">{labels.progress}</span>
           <span className="badge badge-secondary text-xs">{masteredPhrases.length} / 500</span>
         </div>
         <div className="progress-track">

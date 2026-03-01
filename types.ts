@@ -1,4 +1,4 @@
-export type SourceLang = 'no' | 'ru';
+export type SourceLang = 'no' | 'ru' | 'en' | 'de';
 
 export type AppTab = 'home' | 'learn' | 'speak' | 'progress' | 'profile';
 export type LearnMode = 'lessons' | 'vocab' | 'verbs' | 'phrases' | 'vision';
@@ -54,6 +54,8 @@ export interface Lesson {
   icon: string;
   no: LessonContent;
   ru: LessonContent;
+  en: LessonContent;
+  de: LessonContent;
 }
 
 export interface ChatMessage {

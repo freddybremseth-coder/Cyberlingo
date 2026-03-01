@@ -35,6 +35,36 @@ el problema, el día – maskuline selv om de slutter på -a.
 ⚡ Исключения: la mano (рука) — женского рода, несмотря на -o.
 
 💡 Совет: Всегда учите слова с артиклем. Мозг запомнит род автоматически.`
+    },
+    en: {
+      title: 'Nouns & Gender',
+      description: 'Master masculine and feminine – the foundation of Spanish grammar.',
+      content: `Spanish nouns have two genders: masculine and feminine. Much simpler than many other languages!
+
+📌 Basic rules:
+• Words ending in -o are usually masculine: el libro (book), el perro (dog)
+• Words ending in -a are usually feminine: la casa (house), la mesa (table)
+• Articles MUST agree: el/un (masc.) vs la/una (fem.)
+
+⚡ Key exceptions: la mano (hand) is feminine despite ending in -o.
+el problema, el día – masculine despite ending in -a.
+
+💡 Tip: Always learn a new word WITH its article: "la mesa", not just "mesa". Your brain will store the gender automatically.`
+    },
+    de: {
+      title: 'Substantive und Genus',
+      description: 'Maskulin und feminin meistern – das Fundament der spanischen Grammatik.',
+      content: `Im Spanischen haben Substantive nur zwei Genera: maskulin und feminin. Viel einfacher als im Deutschen!
+
+📌 Grundregeln:
+• Wörter auf -o sind meist maskulin: el libro, el perro
+• Wörter auf -a sind meist feminin: la casa, la mesa
+• Artikel müssen übereinstimmen: el/un (mask.) vs la/una (fem.)
+
+⚡ Ausnahmen: la mano (Hand) ist feminin trotz -o.
+el problema, el día – maskulin trotz -a.
+
+💡 Tipp: Lerne jedes Wort immer MIT dem Artikel: "la mesa", nicht nur "mesa". Das Gehirn speichert das Genus automatisch.`
     }
   },
   {
@@ -72,6 +102,39 @@ el problema, el día – maskuline selv om de slutter på -a.
 • (Ellos) hablan – они говорят
 
 💡 Совет: Начните с 5 самых нужных -AR глаголов: hablar, trabajar, comer, vivir, querer.`
+    },
+    en: {
+      title: 'Present Tense Conjugation',
+      description: 'How Spanish verbs change by person – and why you can drop pronouns.',
+      content: `In English we always say "I eat, you eat, he eats". In Spanish, the verb ending tells you WHO is acting – no pronoun needed!
+
+📌 -AR verb: HABLAR (to speak)
+• (Yo) hablo – I speak
+• (Tú) hablas – you speak
+• (Él/Ella) habla – he/she speaks
+• (Nosotros) hablamos – we speak
+• (Vosotros) habláis – you (plural) speak
+• (Ellos) hablan – they speak
+
+⚡ Because endings are distinct, Spanish speakers often drop "yo/tú": "¿Hablas español?" = "Do you speak Spanish?"
+
+💡 There are 3 verb types (-AR, -ER, -IR). -AR is the most common. Start by learning 5 -AR verbs today!`
+    },
+    de: {
+      title: 'Präsenskonjugation',
+      description: 'Wie spanische Verben je nach Person variieren – und warum Pronomen wegfallen können.',
+      content: `Im Deutschen sagen wir "ich esse, du isst, er isst". Im Spanischen zeigt die Verbendung WER handelt – kein Pronomen nötig!
+
+📌 -AR-Verb: HABLAR (sprechen)
+• (Yo) hablo – ich spreche
+• (Tú) hablas – du sprichst
+• (Él/Ella) habla – er/sie spricht
+• (Nosotros) hablamos – wir sprechen
+• (Ellos) hablan – sie sprechen
+
+⚡ Da Endungen eindeutig sind, lassen Spanier oft "yo/tú" weg: "¿Hablas español?" = "Sprichst du Spanisch?"
+
+💡 Es gibt 3 Verbtypen (-AR, -ER, -IR). -AR ist am häufigsten. Lerne heute 5 -AR-Verben!`
     }
   },
   {
@@ -111,6 +174,43 @@ el problema, el día – maskuline selv om de slutter på -a.
 • Por favor / Gracias / De nada / Lo siento
 
 🎨 Цвета: rojo (красный), azul (синий), verde (зелёный), amarillo (жёлтый), blanco (белый), negro (чёрный)`
+    },
+    en: {
+      title: 'Numbers, Greetings & Colors',
+      description: 'The 50 most essential words you need from day one.',
+      content: `Start with the words you'll use most. This is your Spanish survival kit!
+
+📌 Numbers 1–10: uno, dos, tres, cuatro, cinco, seis, siete, ocho, nueve, diez
+📌 11–20: once, doce, trece, catorce, quince, dieciséis, diecisiete, dieciocho, diecinueve, veinte
+📌 Tens: treinta (30), cuarenta (40), cincuenta (50), cien (100)
+
+💬 Essential greetings:
+• Hola / Buenos días / Buenas tardes / Buenas noches
+• ¿Cómo estás? / Bien, gracias / ¿Y tú?
+• Por favor / Gracias / De nada / Lo siento
+• ¿Cuánto cuesta? / No entiendo / ¿Puede repetir?
+
+🎨 Colors: rojo (red), azul (blue), verde (green), amarillo (yellow), blanco (white), negro (black), naranja (orange)
+
+💡 Learn these BEFORE you tackle grammar!`
+    },
+    de: {
+      title: 'Zahlen, Begrüßungen und Farben',
+      description: 'Die 50 wichtigsten Wörter, die du von Tag eins brauchst.',
+      content: `Beginne mit den Wörtern, die du am häufigsten verwenden wirst. Dein Spanisch-Überlebenskit!
+
+📌 Zahlen 1–10: uno, dos, tres, cuatro, cinco, seis, siete, ocho, nueve, diez
+📌 11–20: once, doce, trece, catorce, quince, dieciséis, diecisiete, dieciocho, diecinueve, veinte
+📌 Zehner: treinta (30), cuarenta (40), cincuenta (50), cien (100)
+
+💬 Wichtige Begrüßungen:
+• Hola / Buenos días / Buenas tardes / Buenas noches
+• ¿Cómo estás? / Bien, gracias / ¿Y tú?
+• Por favor / Gracias / De nada / Lo siento
+
+🎨 Farben: rojo (rot), azul (blau), verde (grün), amarillo (gelb), blanco (weiß), negro (schwarz)
+
+💡 Lerne das BEVOR du mit der Grammatik anfängst!`
     }
   },
   {
@@ -149,6 +249,40 @@ el problema, el día – maskuline selv om de slutter på -a.
 • "buen amigo" — buenos amigos
 
 💡 Правило: прилагательное ПОСЛЕ существительного, согласовано по роду и числу.`
+    },
+    en: {
+      title: 'Adjective Placement & Agreement',
+      description: 'Spanish adjectives come AFTER the noun and must agree in gender and number.',
+      content: `In English: "the red car". In Spanish: "el coche ROJO" – the adjective comes AFTER the noun.
+
+📌 Adjectives agree in gender and number:
+• el libro rojo – los libros rojos (masc.)
+• la casa roja – las casas rojas (fem.)
+
+📌 Exception – some adjectives can come BEFORE for special meaning:
+• "un gran hombre" (a great man) – emphasises quality
+• "buen amigo" – "bueno" drops -o before masculine nouns
+
+💬 Practice:
+• ¿Dónde está el restaurante bueno? (Where is the good restaurant?)
+• Quiero una habitación grande. (I want a large room.)
+
+💡 80% of adjectives follow the basic rule: adjective AFTER noun, agreeing in gender and number.`
+    },
+    de: {
+      title: 'Stellung und Deklination der Adjektive',
+      description: 'Adjektive stehen im Spanischen NACH dem Substantiv und stimmen in Genus und Numerus überein.',
+      content: `Im Deutschen: "das rote Auto". Im Spanischen: "el coche ROJO" – das Adjektiv steht NACH dem Substantiv.
+
+📌 Adjektive stimmen in Genus und Numerus überein:
+• el libro rojo – los libros rojos (mask.)
+• la casa roja – las casas rojas (fem.)
+
+📌 Ausnahmen (vor dem Substantiv):
+• "un gran hombre" – ein großartiger Mann
+• "buen amigo" – "bueno" verliert das -o vor maskulinen Nomen
+
+💡 80% der Adjektive folgen der Grundregel: Adjektiv NACH dem Substantiv.`
     }
   },
   {
@@ -193,6 +327,45 @@ el problema, el día – maskuline selv om de slutter på -a.
 • ¿Qué? / ¿Cómo? / ¿Dónde? / ¿Cuándo? / ¿Cuánto?
 
 💡 Создайте свои первые предложения с этими блоками!`
+    },
+    en: {
+      title: 'Articles, "Hay" & Questions',
+      description: 'Build your first complete Spanish sentences.',
+      content: `Learn the essential building blocks for forming sentences.
+
+📌 Definite articles:
+• el/la (singular), los/las (plural)
+• el libro, la casa, los niños, las mesas
+
+📌 Indefinite articles:
+• un/una (singular), unos/unas (plural)
+• un café, una cerveza, unos amigos
+
+📌 "Hay" = there is / there are:
+• Hay una playa cerca. (There's a beach nearby.)
+• ¿Hay wifi aquí? (Is there wifi here?)
+
+📌 Questions – Spanish inverts word order:
+• ¿Tienes hambre? (Are you hungry?)
+• ¿Qué? / ¿Cómo? / ¿Dónde? / ¿Cuándo? / ¿Por qué? / ¿Cuánto?
+
+💡 Start building your own sentences with these blocks!`
+    },
+    de: {
+      title: 'Artikel, "Hay" und Fragen',
+      description: 'Baue deine ersten vollständigen spanischen Sätze.',
+      content: `📌 Bestimmte Artikel: el/la (Singular), los/las (Plural)
+📌 Unbestimmte Artikel: un/una (Singular), unos/unas (Plural)
+
+📌 "Hay" = es gibt:
+• Hay una playa cerca. (Es gibt einen Strand in der Nähe.)
+• ¿Hay wifi aquí? (Gibt es hier WLAN?)
+
+📌 Fragen – spanische Wortstellung ist invertiert:
+• ¿Tienes hambre? (Hast du Hunger?)
+• ¿Qué? / ¿Cómo? / ¿Dónde? / ¿Cuándo? / ¿Por qué? / ¿Cuánto?
+
+💡 Fange an, eigene Sätze mit diesen Bausteinen zu bilden!`
     }
   },
   {
@@ -240,6 +413,48 @@ el problema, el día – maskuline selv om de slutter på -a.
 • ¿Puedes hablar más despacio? (Можешь говорить медленнее?)
 
 💡 Испанцы любят, когда иностранцы говорят по-испански. Не бойтесь ошибаться!`
+    },
+    en: {
+      title: 'Introduce Yourself',
+      description: 'Everything you need to introduce yourself in Spanish from day one.',
+      content: `These are the most important phrases. Practice until they feel automatic!
+
+📌 Basic introduction:
+• Me llamo... / Mi nombre es... (My name is...)
+• Soy de Inglaterra / Australia. (I'm from England / Australia.)
+• Tengo 30 años. (I'm 30 years old.)
+• Soy [job]: estudiante, médico, ingeniero, profesor
+
+📌 What do you do?
+• Trabajo en... (I work at/in...)
+• Estudio... (I study...)
+• Me gusta [infinitive]: Me gusta viajar / cocinar / aprender español
+
+📌 Learner phrases:
+• Estoy aprendiendo español. (I'm learning Spanish.)
+• No hablo español muy bien todavía. (I don't speak Spanish very well yet.)
+• ¿Puedes hablar más despacio? (Can you speak more slowly?)
+
+💡 Pro tip: Spanish speakers LOVE when foreigners try to speak Spanish. Don't be afraid to make mistakes!`
+    },
+    de: {
+      title: 'Sich vorstellen',
+      description: 'Alles, was du brauchst, um dich von Anfang an auf Spanisch vorzustellen.',
+      content: `📌 Grundlegende Vorstellung:
+• Me llamo... / Mi nombre es... (Ich heiße...)
+• Soy de Alemania / Austria. (Ich komme aus Deutschland / Österreich.)
+• Tengo 30 años. (Ich bin 30 Jahre alt.)
+• Soy [Beruf]: estudiante, médico, ingeniero, profesor
+
+📌 Was machst du?
+• Trabajo en... / Estudio... (Ich arbeite bei... / Ich studiere...)
+• Me gusta viajar / cocinar / aprender español.
+
+📌 Lernphrasen:
+• Estoy aprendiendo español. (Ich lerne Spanisch.)
+• ¿Puedes hablar más despacio? (Kannst du langsamer sprechen?)
+
+💡 Tipp: Spanier lieben es, wenn Ausländer Spanisch sprechen. Keine Angst vor Fehlern!`
     }
   },
 
@@ -291,6 +506,50 @@ el problema, el día – maskuline selv om de slutter på -a.
 • "Estoy aburrido" = мне сейчас скучно
 
 💡 Правило: SER = кто ты ЕСТЬ, ESTAR = как ты СЕБЯ ЧУВСТВУЕШЬ.`
+    },
+    en: {
+      title: 'Ser vs Estar – The Big Challenge',
+      description: 'Two verbs for "to be" – the most important distinction in Spanish.',
+      content: `English only has one "to be", but Spanish has two. Once you understand the logic, it clicks!
+
+📌 SER – permanent, identity, essence:
+• Soy inglés. (I'm English.) – nationality
+• Es médico. (He's a doctor.) – profession
+• Son las tres. (It's three o'clock.) – time
+• Es alta y delgada. (She's tall and slim.) – permanent traits
+
+📌 ESTAR – temporary, state, position:
+• Estoy cansado. (I'm tired.) – temporary feeling
+• Está en Madrid. (He's in Madrid.) – location
+• El café está frío. (The coffee is cold.) – temporary state
+• ¿Cómo estás? (How are you?) – current condition
+
+⚡ Classic mistake:
+• "Soy aburrido" = I AM a boring person (permanent)
+• "Estoy aburrido" = I'm bored right now (temporary)
+
+💡 Memory trick: SER = who you ARE, ESTAR = how you FEEL.`
+    },
+    de: {
+      title: 'Ser vs Estar – Die große Herausforderung',
+      description: 'Zwei Verben für "sein" – der wichtigste Unterschied im Spanischen.',
+      content: `Im Deutschen gibt es nur ein "sein", im Spanischen gibt es zwei. Die Logik dahinter ist klar!
+
+📌 SER – dauerhaft, Identität, Wesen:
+• Soy alemán. (Ich bin Deutscher.) – Nationalität
+• Es médico. (Er ist Arzt.) – Beruf
+• Es alta. (Sie ist groß.) – dauerhafte Eigenschaften
+
+📌 ESTAR – vorübergehend, Zustand, Position:
+• Estoy cansado. (Ich bin müde.) – vorübergehend
+• Está en Madrid. (Er ist in Madrid.) – Ort
+• El café está frío. (Der Kaffee ist kalt.) – vorübergehender Zustand
+
+⚡ Klassischer Fehler:
+• "Soy aburrido" = Ich bin ein langweiliger Mensch (dauerhaft)
+• "Estoy aburrido" = Mir ist gerade langweilig (vorübergehend)
+
+💡 Merkrege: SER = wer du BIST, ESTAR = wie du dich FÜHLST.`
     }
   },
   {
@@ -338,6 +597,49 @@ el problema, el día – maskuline selv om de slutter på -a.
 • ¿Dónde estuviste? (Где ты был?)
 
 💡 Используйте с: ayer, la semana pasada, en 2020.`
+    },
+    en: {
+      title: 'Preterite – Completed Actions',
+      description: 'The past tense for finished, one-time actions.',
+      content: `The Preterite (Pretérito Indefinido) is used for actions that are completely finished in the past.
+
+📌 -AR verb (hablar):
+• hablé, hablaste, habló, hablamos, hablasteis, hablaron
+
+📌 -ER/-IR verb (comer/vivir):
+• comí, comiste, comió, comimos, comisteis, comieron
+
+⚠️ Irregular verbs (must memorise!):
+• ser/ir: fui, fuiste, fue, fuimos, fueron (identical conjugation!)
+• tener: tuve, tuviste, tuvo...
+• estar: estuve, estuviste, estuvo...
+• hacer: hice, hiciste, hizo...
+
+💬 Examples:
+• Ayer comí paella. (Yesterday I ate paella.)
+• El año pasado fui a España. (Last year I went to Spain.)
+• ¿Dónde estuviste? (Where were you?)
+
+💡 Use preterite with: ayer, la semana pasada, en 2020.`
+    },
+    de: {
+      title: 'Präteritum – Abgeschlossene Handlungen',
+      description: 'Die Vergangenheitsform für abgeschlossene, einmalige Handlungen.',
+      content: `Das Pretérito Indefinido wird für vollständig abgeschlossene Handlungen in der Vergangenheit verwendet.
+
+📌 -AR: hablar → hablé, hablaste, habló, hablamos, hablaron
+📌 -ER/-IR: comer → comí, comiste, comió, comimos, comieron
+
+⚠️ Unregelmäßige (unbedingt lernen!):
+• ser/ir: fui, fuiste, fue...
+• tener: tuve, tuviste...
+• estar: estuve, estuviste...
+
+💬 Beispiele:
+• Ayer comí paella. (Gestern aß ich Paella.)
+• ¿Dónde estuviste? (Wo warst du?)
+
+💡 Verwende mit: ayer, la semana pasada, en 2020.`
     }
   },
   {
@@ -382,6 +684,49 @@ el problema, el día – maskuline selv om de slutter på -a.
 • No creo que sea verdad. (Я не думаю, что это правда.)
 
 💡 Начните с 5 ключевых фраз-триггеров.`
+    },
+    en: {
+      title: 'Subjunctive – Wishes, Doubt & Emotions',
+      description: 'The mood that separates intermediate from advanced Spanish.',
+      content: `The subjunctive is used to express wishes, doubt, emotions, or hypothetical situations.
+
+📌 Key rule: Triggered by certain phrases + "que":
+• Quiero que... (I want [someone] to...)
+• Es importante que... (It's important that...)
+• Espero que... (I hope that...)
+• No creo que... (I don't think that...)
+• Me alegra que... (I'm glad that...)
+
+📌 Conjugation (present subjunctive, -AR → use -ER endings!):
+• hablar: hable, hables, hable, hablemos, habléis, hablen
+• comer: coma, comas, coma, comamos, comáis, coman
+
+💬 Examples:
+• Quiero que vengas. (I want you to come.)
+• Es posible que llueva. (It might rain.)
+• No creo que sea verdad. (I don't think it's true.)
+
+💡 Start by learning the 5 most common trigger phrases. The subjunctive becomes natural with practice!`
+    },
+    de: {
+      title: 'Subjuntivo – Wünsche, Zweifel und Gefühle',
+      description: 'Der Modus, der Mittelstufe von Fortgeschrittenem unterscheidet.',
+      content: `Der Subjuntivo wird für Wünsche, Zweifel, Gefühle oder hypothetische Situationen verwendet.
+
+📌 Grundregel: Wird durch bestimmte Phrasen + "que" ausgelöst:
+• Quiero que... (Ich möchte, dass...)
+• Es importante que... (Es ist wichtig, dass...)
+• Espero que... (Ich hoffe, dass...)
+
+📌 Konjugation (-AR → ER-Endungen verwenden!):
+• hablar: hable, hables, hable, hablemos, hablen
+
+💬 Beispiele:
+• Quiero que vengas. (Ich möchte, dass du kommst.)
+• Es posible que llueva. (Es könnte regnen.)
+• No creo que sea verdad. (Ich glaube nicht, dass das wahr ist.)
+
+💡 Beginne mit den 5 häufigsten Auslöserphrasen.`
     }
   },
   {
@@ -423,6 +768,47 @@ el problema, el día – maskuline selv om de slutter på -a.
 📌 Неправильные: ser (era), ir (iba), ver (veía)
 
 💡 Правило: Претерит = "случилось" (завершено). Имперфект = "происходило / было привычным".`
+    },
+    en: {
+      title: 'Imperfect – Ongoing Past Actions',
+      description: 'The past tense for habits, descriptions, and background actions.',
+      content: `The Imperfect (Imperfecto) is the second key past tense. Use it for:
+
+📌 Past habits:
+• De niño, jugaba al fútbol. (As a child, I used to play football.)
+
+📌 Descriptions in the past:
+• Era un día bonito. (It was a beautiful day.)
+• Había muchas personas. (There were many people.)
+
+📌 Background/ongoing actions:
+• Mientras comía, vi la televisión. (While I was eating, I watched TV.)
+
+📌 Conjugation (very regular!):
+• -AR: hablaba, hablabas, hablaba, hablábamos, hablaban
+• -ER/-IR: comía, comías, comía, comíamos, comían
+• Irregular: ser (era/eras), ir (iba/ibas), ver (veía/veías)
+
+💡 Key rule: Preterite = "It happened" (finished). Imperfect = "It was happening / used to happen".`
+    },
+    de: {
+      title: 'Imperfekt – Andauernde Vergangenheit',
+      description: 'Die Vergangenheitsform für Gewohnheiten, Beschreibungen und Hintergrundhandlungen.',
+      content: `Das Imperfecto wird für folgende Situationen verwendet:
+
+📌 Vergangene Gewohnheiten:
+• De niño, jugaba al fútbol. (Als Kind spielte ich Fußball.)
+
+📌 Beschreibungen in der Vergangenheit:
+• Era un día bonito. (Es war ein schöner Tag.)
+
+📌 Hintergrundhandlungen:
+• Mientras comía, vi la televisión. (Während ich aß, sah ich fern.)
+
+📌 Konjugation (-AR): hablaba, hablabas, hablaba, hablábamos, hablaban
+📌 Unregelmäßig: ser (era), ir (iba), ver (veía)
+
+💡 Regel: Pretérito = "es geschah" (abgeschlossen). Imperfecto = "es geschah gerade / war Gewohnheit".`
     }
   },
   {
@@ -469,6 +855,54 @@ el problema, el día – maskuline selv om de slutter på -a.
 📌 Экстренные ситуации: ¡Ayuda! / ¡Llame a la policía! / Necesito un médico.
 
 💡 Сохраните эти фразы на телефон перед поездкой!`
+    },
+    en: {
+      title: 'Travel & Everyday Conversations',
+      description: 'Essential phrases for travelling in Spain and Latin America.',
+      content: `These are phrases you'll use EVERY DAY when travelling:
+
+📌 Transport:
+• ¿Dónde está la parada de autobús/metro? (Where's the bus/metro stop?)
+• Un billete de ida y vuelta a... (A return ticket to...)
+• ¿A qué hora sale el tren? (What time does the train leave?)
+
+📌 Hotel:
+• Tengo una reserva. (I have a reservation.)
+• ¿A qué hora es el check-out? (What time is check-out?)
+
+📌 Restaurant:
+• ¿Me puede traer la carta? (Can I have the menu?)
+• ¿Cuál es el plato del día? (What's today's special?)
+• La cuenta, por favor. (The bill, please.)
+
+📌 Emergencies:
+• ¡Ayuda! (Help!) / ¡Llame a la policía! (Call the police!)
+• Me han robado. (I've been robbed.)
+• Necesito un médico. (I need a doctor.)
+
+💡 Save these as a screenshot BEFORE you travel!`
+    },
+    de: {
+      title: 'Reisen und Alltagsgespräche',
+      description: 'Wichtigste Phrasen für Reisen in Spanien und Lateinamerika.',
+      content: `📌 Transport:
+• ¿Dónde está la parada de autobús/metro? (Wo ist die Bus-/Metrostation?)
+• Un billete de ida y vuelta a... (Eine Hin- und Rückfahrkarte nach...)
+• ¿A qué hora sale el tren? (Wann fährt der Zug ab?)
+
+📌 Hotel:
+• Tengo una reserva. (Ich habe eine Reservierung.)
+• ¿A qué hora es el check-out? (Wann ist der Check-out?)
+
+📌 Restaurant:
+• ¿Me puede traer la carta? (Kann ich die Speisekarte haben?)
+• La cuenta, por favor. (Die Rechnung, bitte.)
+
+📌 Notfälle:
+• ¡Ayuda! (Hilfe!) / ¡Llame a la policía! (Rufen Sie die Polizei!)
+• Necesito un médico. (Ich brauche einen Arzt.)
+
+💡 Speichere das als Screenshot VOR der Reise!`
     }
   },
 
@@ -515,6 +949,41 @@ el problema, el día – maskuline selv om de slutter på -a.
 📌 DESDE/HASTA – от/до (время, место): Desde las 9 hasta las 17.
 
 💡 Личный предлог "a" — важнейший момент этого урока!`
+    },
+    en: {
+      title: 'Mastering Prepositions',
+      description: 'The complex prepositions that separate B1 from B2.',
+      content: `Prepositions are tricky because they don't always translate logically. Here are the key ones:
+
+📌 A – to, at, personal object marker:
+• Voy a Madrid. (I'm going to Madrid.)
+• Llamo a María. (personal object – "a" is MANDATORY)
+• A las tres. (At three o'clock.)
+
+📌 EN – in, at, on (location):
+• Vivo en Londres. / Estoy en casa. / El libro está en la mesa.
+
+📌 CON / SIN – with / without:
+• Café con leche. / Sin azúcar. / Voy contigo. (I'm going with you)
+
+📌 DE – of, from, about (possession):
+• Soy de Inglaterra. / El libro de María. / Una taza de café.
+
+📌 DESDE / HASTA – from / until (time and place):
+• Desde Madrid hasta Barcelona. / Desde las 9 hasta las 17.
+
+💡 The personal "a" is the single most important thing in this lesson!`
+    },
+    de: {
+      title: 'Präpositionen meistern',
+      description: 'Die komplexen Präpositionen, die B1 von B2 unterscheiden.',
+      content: `📌 A – nach, zu, persönliches Objekt: Voy a Madrid. / Llamo a María.
+📌 EN – in, an, auf (Ort): Vivo en Berlín. / Estoy en casa.
+📌 CON/SIN – mit/ohne: Café con leche. / Sin azúcar.
+📌 DE – von, aus, über (Besitz): Soy de Alemania. / El libro de María.
+📌 DESDE/HASTA – von/bis (Zeit, Ort): Desde las 9 hasta las 17.
+
+💡 Das persönliche "a" ist das Wichtigste in dieser Lektion!`
     }
   },
   {
@@ -544,9 +1013,6 @@ el problema, el día – maskuline selv om de slutter på -a.
 • PARA ser fremover: mål, resultat, destinasjon, mottaker
 • POR ser bakover eller rundt: årsak, bytte, prosess, varighet
 
-💬 Testsetninger:
-• Lo compré por / para ti. (por = p.g.a. deg; para = til deg)
-
 💡 PARA = "for å / til". POR = "p.g.a. / for / gjennom".`
     },
     ru: {
@@ -565,6 +1031,48 @@ el problema, el día – maskuline selv om de slutter på -a.
 • POR смотрит НАЗАД (причина/процесс)
 
 💡 PARA = "чтобы / для". POR = "из-за / через / в обмен на".`
+    },
+    en: {
+      title: 'Por vs Para – Deep Dive',
+      description: 'The technical difference between the two trickiest prepositions.',
+      content: `POR and PARA both translate as "for" in English – but they are NOT interchangeable!
+
+📌 PARA – goal, destination, recipient, deadline:
+• Salgo para Madrid. (I'm heading to Madrid.) – destination
+• Este regalo es para ti. (This gift is for you.) – recipient
+• Necesito esto para el lunes. (I need this by Monday.) – deadline
+• Estudio para aprender. (I study in order to learn.) – purpose
+
+📌 POR – cause, exchange, duration, agent, movement through:
+• Lo hice por amor. (I did it out of love.) – cause
+• Te doy diez euros por la camisa. (I'll give you ten euros for the shirt.) – exchange
+• Caminé por el parque. (I walked through the park.) – movement
+• El libro fue escrito por Cervantes. – passive agent
+
+⚡ Memory trick:
+• PARA looks FORWARD: goal, result, destination, recipient
+• POR looks BACKWARD or around: cause, exchange, process, duration
+
+💡 PARA = "in order to / for (someone)". POR = "because of / through / in exchange for".`
+    },
+    de: {
+      title: 'Por vs Para – Tiefenanalyse',
+      description: 'Der technische Unterschied zwischen den zwei schwierigsten Präpositionen.',
+      content: `POR und PARA werden beide mit "für" übersetzt – sie sind aber NICHT austauschbar!
+
+📌 PARA – Ziel, Bestimmungsort, Empfänger, Frist:
+• Salgo para Madrid. / Este regalo es para ti.
+• Necesito esto para el lunes. / Estudio para aprender.
+
+📌 POR – Ursache, Tausch, Dauer, Agens, Bewegung durch:
+• Lo hice por amor. / Te doy 10€ por la camisa.
+• Caminé por el parque.
+
+⚡ Merkhilfe:
+• PARA schaut VORWÄRTS (Ziel/Ergebnis)
+• POR schaut RÜCKWÄRTS (Ursache/Prozess)
+
+💡 PARA = "um zu / für (jemanden)". POR = "wegen / durch / im Austausch für".`
     }
   },
   {
@@ -613,6 +1121,50 @@ el problema, el día – maskuline selv om de slutter på -a.
 • Llevo tres años aprendiendo español.
 
 💡 "Se" — ключ к естественному испанскому!`
+    },
+    en: {
+      title: 'Passive & Impersonal Constructions',
+      description: 'Advanced structures that make your Spanish sound natural.',
+      content: `Learn to express yourself like a native speaker!
+
+📌 Passive with "ser" + past participle:
+• El libro fue escrito por García Márquez. (The book was written by...)
+• La ventana fue rota. (The window was broken.)
+
+📌 Reflexive passive with "se" (more natural in Spanish!):
+• Se habla español aquí. (Spanish is spoken here.)
+• Se vende piso. (Flat for sale.)
+• Se dice que... (It is said that...)
+
+📌 Impersonal sentences:
+• Hay que estudiar. (One must study.) – general obligation
+• Se puede nadar aquí. (One can swim here.)
+• Es necesario hablar. (It is necessary to speak.)
+
+📌 "Llevar" + gerund (action in progress for a period):
+• Llevo tres años aprendiendo español. (I've been learning Spanish for three years.)
+• ¿Cuánto tiempo llevas esperando? (How long have you been waiting?)
+
+💡 "Se" is the key to natural, everyday Spanish!`
+    },
+    de: {
+      title: 'Passiv und unpersönliche Konstruktionen',
+      description: 'Fortgeschrittene Strukturen für natürliches Spanisch.',
+      content: `📌 Passiv mit "ser" + Partizip:
+• El libro fue escrito por García Márquez.
+
+📌 Reflexivpassiv mit "se" (natürlicher im Spanischen!):
+• Se habla español aquí. (Hier wird Spanisch gesprochen.)
+• Se vende piso. (Wohnung zu verkaufen.)
+
+📌 Unpersönliche Sätze:
+• Hay que estudiar. (Man muss lernen.)
+• Se puede nadar aquí. (Man kann hier schwimmen.)
+
+📌 "Llevar" + Gerundium:
+• Llevo tres años aprendiendo español. (Ich lerne seit drei Jahren Spanisch.)
+
+💡 "Se" ist der Schlüssel zu natürlichem, alltäglichem Spanisch!`
     }
   },
 ];

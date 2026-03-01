@@ -373,7 +373,7 @@ const App: React.FC = () => {
             className="flex rounded-lg overflow-hidden"
             style={{ border: '1px solid var(--border)', background: 'var(--bg-surface)' }}
           >
-            {(['no', 'ru'] as SourceLang[]).map(l => (
+            {(['no', 'en', 'de', 'ru'] as SourceLang[]).map(l => (
               <button
                 key={l}
                 onClick={() => { setSourceLang(l); setUser(prev => prev ? { ...prev, sourceLang: l } : prev); }}
