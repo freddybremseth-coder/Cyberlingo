@@ -1,9 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { getPhraseBatch } from '../services/geminiService';
 import { SourceLang } from '../types';
 import TTSButton from './TTSButton';
-import NeonButton from './NeonButton';
 
 interface Phrase {
   spanish: string;
@@ -12,13 +10,21 @@ interface Phrase {
 }
 
 const CATEGORIES = [
-  'Greetings', 'Directions', 'Restaurant', 'Shopping', 
-  'Emergency', 'Social', 'Business', 'Travel', 'Hotel', 'Small Talk'
+  { id: 'Greetings', icon: '👋' },
+  { id: 'Directions', icon: '🗺️' },
+  { id: 'Restaurant', icon: '🍽️' },
+  { id: 'Shopping', icon: '🛍️' },
+  { id: 'Emergency', icon: '🚨' },
+  { id: 'Social', icon: '🤝' },
+  { id: 'Business', icon: '💼' },
+  { id: 'Travel', icon: '✈️' },
+  { id: 'Hotel', icon: '🏨' },
+  { id: 'Small Talk', icon: '💬' },
 ];
 
 const PhraseMode: React.FC<{ lang: SourceLang }> = ({ lang }) => {
   const [phrases, setPhrases] = useState<Phrase[]>([]);
-  const [activeCategory, setActiveCategory] = useState(CATEGORIES[0]);
+  const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].id);
   const [loading, setLoading] = useState(false);
   const [masteredPhrases, setMasteredPhrases] = useState<string[]>(() => {
     const saved = localStorage.getItem('cyberlingo_phrases');
@@ -49,92 +55,129 @@ const PhraseMode: React.FC<{ lang: SourceLang }> = ({ lang }) => {
     localStorage.setItem('cyberlingo_phrases', JSON.stringify(newMastered));
   };
 
-  const progress = Math.round((masteredPhrases.length / 500) * 100);
+  const progress = Math.min(100, Math.round((masteredPhrases.length / 500) * 100));
 
   const labels = {
-    no: { title: 'Frase-Dekoder', sub: '500 Essensielle Fraser', context: 'Kontekst', progress: 'Mestringsnivå' },
-    ru: { title: 'Декодер Фраз', sub: '500 важных фраз', context: 'Контекст', progress: 'Уровень мастерства' }
+    no: { title: 'Fraser', sub: '500 essensielle hverdagsfraser', context: 'Kontekst', loading: 'Henter fraser...' },
+    ru: { title: 'Фразы', sub: '500 важных испанских фраз', context: 'Контекст', loading: 'Загрузка...' },
   }[lang];
 
   return (
-    <div className="animate-in fade-in duration-700">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-6">
-        <div>
-          <h1 className="text-4xl font-heading text-magenta neon-text-magenta mb-2 uppercase">{labels.title}</h1>
-          <p className="text-white/40 font-mono text-xs tracking-widest uppercase">{labels.sub}</p>
+    <div className="animate-fadeIn space-y-5">
+      {/* Header */}
+      <div>
+        <h2 className="text-2xl font-black mb-1">{labels.title}</h2>
+        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{labels.sub}</p>
+      </div>
+
+      {/* Progress */}
+      <div
+        className="p-4 rounded-2xl"
+        style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+      >
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-sm font-semibold">Fraser lært</span>
+          <span className="badge badge-secondary text-xs">{masteredPhrases.length} / 500</span>
         </div>
-        <div className="w-full md:w-64">
-          <div className="flex justify-between text-[10px] font-mono mb-1">
-            <span className="text-white/40 uppercase">{labels.progress}</span>
-            <span className="text-cyan">{masteredPhrases.length} / 500</span>
-          </div>
-          <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-            <div className="h-full bg-cyan shadow-[0_0_8px_#00D9FF]" style={{ width: `${progress}%` }}></div>
-          </div>
+        <div className="progress-track">
+          <div
+            className="progress-fill"
+            style={{ width: `${progress}%`, background: 'var(--accent)' }}
+          />
         </div>
       </div>
 
-      <div className="flex gap-2 mb-10 overflow-x-auto pb-4 no-scrollbar border-b border-white/5">
+      {/* Category tabs */}
+      <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
         {CATEGORIES.map(cat => (
           <button
-            key={cat}
-            onClick={() => setActiveCategory(cat)}
-            className={`px-4 py-2 rounded border font-mono text-[10px] uppercase transition-all whitespace-nowrap
-              ${activeCategory === cat ? 'bg-magenta/10 border-magenta text-magenta shadow-[0_0_10px_rgba(255,0,110,0.2)]' : 'border-white/5 text-white/40 hover:border-white/20'}`}
+            key={cat.id}
+            onClick={() => setActiveCategory(cat.id)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all shrink-0"
+            style={{
+              background: activeCategory === cat.id ? 'var(--accent)' : 'var(--bg-card)',
+              color: activeCategory === cat.id ? 'white' : 'var(--text-muted)',
+              border: `1px solid ${activeCategory === cat.id ? 'transparent' : 'var(--border)'}`,
+            }}
           >
-            {cat}
+            <span>{cat.icon}</span>
+            <span>{cat.id}</span>
           </button>
         ))}
       </div>
 
+      {/* Phrase list */}
       {loading ? (
-        <div className="p-20 flex flex-col items-center justify-center space-y-6">
-          <div className="w-16 h-1 border-white/10 relative overflow-hidden bg-white/5 rounded-full">
-             <div className="absolute inset-0 bg-magenta animate-[loading_1.5s_infinite]"></div>
-          </div>
-          <p className="text-magenta font-mono text-[10px] animate-pulse uppercase tracking-[0.4em]">SYNCING_PHRASE_PROTOCOLS...</p>
+        <div className="flex flex-col items-center justify-center py-16 gap-3">
+          <div
+            className="w-10 h-10 rounded-full border-4 border-t-transparent animate-spin"
+            style={{ borderColor: 'var(--accent) transparent transparent transparent' }}
+          />
+          <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>{labels.loading}</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {phrases.map((phrase, i) => {
             const isMastered = masteredPhrases.includes(phrase.spanish);
             return (
-              <div 
-                key={i} 
-                className={`glass-panel p-6 rounded border transition-all flex flex-col md:flex-row gap-6 items-start md:items-center relative group
-                  ${isMastered ? 'border-lime/30 bg-lime/5 shadow-[0_0_15px_rgba(255,190,11,0.05)]' : 'border-white/5 hover:border-magenta/30'}`}
+              <div
+                key={i}
+                className="p-4 rounded-2xl transition-all"
+                style={{
+                  background: isMastered ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)',
+                  border: `1px solid ${isMastered ? 'rgba(74,222,128,0.3)' : 'var(--border)'}`,
+                }}
               >
-                <div className="flex items-center gap-4 min-w-[30%]">
-                   <TTSButton text={phrase.spanish} />
-                   <div>
-                     <h3 className={`text-xl font-heading ${isMastered ? 'text-lime' : 'text-white'}`}>{phrase.spanish}</h3>
-                     <p className="text-white/60 font-body">{phrase.translation}</p>
-                   </div>
+                {/* Top row: Spanish + TTS + mastered toggle */}
+                <div className="flex items-start gap-3 mb-2">
+                  <TTSButton text={phrase.spanish} />
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className="font-bold text-base leading-snug"
+                      style={{ color: isMastered ? 'var(--success)' : 'var(--text)' }}
+                    >
+                      {phrase.spanish}
+                    </p>
+                    <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                      {phrase.translation}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => toggleMastered(phrase.spanish)}
+                    className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-all"
+                    style={{
+                      background: isMastered ? 'var(--success)' : 'rgba(255,255,255,0.05)',
+                      border: `1px solid ${isMastered ? 'var(--success)' : 'var(--border)'}`,
+                    }}
+                  >
+                    {isMastered ? (
+                      <svg className="w-4 h-4 text-white" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" style={{ color: 'var(--text-faint)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </button>
                 </div>
 
-                <div className="flex-1 border-l border-white/10 pl-6">
-                   <span className="text-[9px] font-mono text-white/30 uppercase block mb-1">{labels.context}</span>
-                   <p className="text-xs text-white/40 italic">{phrase.context}</p>
-                </div>
-
-                <button 
-                  onClick={() => toggleMastered(phrase.spanish)}
-                  className={`px-4 py-1 rounded-sm border font-mono text-[9px] uppercase transition-all
-                    ${isMastered ? 'bg-lime text-dark border-lime' : 'border-white/10 text-white/30 hover:border-white/30'}`}
-                >
-                  {isMastered ? 'COMPLETED' : 'MARK_LEARNED'}
-                </button>
+                {/* Context */}
+                {phrase.context && (
+                  <div
+                    className="mt-2 px-3 py-2 rounded-xl"
+                    style={{ background: 'rgba(167,139,250,0.07)', border: '1px solid rgba(167,139,250,0.12)' }}
+                  >
+                    <p className="text-xs" style={{ color: 'var(--accent)' }}>
+                      💡 {phrase.context}
+                    </p>
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
       )}
-      <style>{`
-        @keyframes loading {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-      `}</style>
     </div>
   );
 };

@@ -1,8 +1,6 @@
-
 import React, { useState } from 'react';
 import { analyzeSentence } from '../services/geminiService';
 import { SourceLang } from '../types';
-import NeonButton from './NeonButton';
 import TTSButton from './TTSButton';
 
 interface BreakdownItem {
@@ -22,16 +20,35 @@ interface NeuralDecoderProps {
   lang?: SourceLang;
 }
 
-const NeuralDecoder: React.FC<NeuralDecoderProps> = ({ initialSentence = "Hola, ¿cómo estás today?", lang = 'no' }) => {
+const TYPE_COLOR_MAP: Record<string, string> = {
+  verb: 'var(--primary)',
+  noun: 'var(--secondary)',
+  adjective: 'var(--accent)',
+  adverb: 'var(--warning)',
+  pronoun: 'var(--success)',
+  preposition: 'var(--danger)',
+  article: 'var(--text-muted)',
+  conjunction: 'var(--text-muted)',
+};
+
+const getTypeColor = (type: string): string =>
+  TYPE_COLOR_MAP[type.toLowerCase()] ?? 'var(--text-muted)';
+
+const NeuralDecoder: React.FC<NeuralDecoderProps> = ({
+  initialSentence = 'Hola, ¿cómo estás?',
+  lang = 'no',
+}) => {
   const [input, setInput] = useState(initialSentence);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [activeWord, setActiveWord] = useState<number | null>(null);
 
   const handleDecode = async () => {
     if (!input.trim() || loading) return;
     setLoading(true);
+    setResult(null);
+    setActiveWord(null);
     try {
-      // Fixed: Explicitly cast lang to SourceLang to resolve type mismatch on line 34
       const data = await analyzeSentence(input, lang as SourceLang);
       setResult(data);
     } catch (e) {
@@ -41,82 +58,152 @@ const NeuralDecoder: React.FC<NeuralDecoderProps> = ({ initialSentence = "Hola, 
     }
   };
 
-  const localized = {
-    no: { title: 'Nevral Dekoder', placeholder: 'Skriv en spansk setning...', action: 'Dekod Syntaks', literal: 'Bokstavelig', idiomatic: 'Idiomatisk' },
-    ru: { title: 'Нейронный Декодер', placeholder: 'Введите испанское предложение...', action: 'Декодировать синтаксис', literal: 'Дословно', idiomatic: 'Смысловой перевод' }
+  const labels = {
+    no: {
+      title: 'Setningsanalyse',
+      placeholder: 'Skriv en spansk setning...',
+      action: 'Analyser',
+      loading: 'Analyserer...',
+      idiomatic: 'Norsk oversettelse',
+      literal: 'Bokstavelig oversettelse',
+      breakdown: 'Grammatisk nedbrytning',
+    },
+    ru: {
+      title: 'Анализ предложений',
+      placeholder: 'Введите испанское предложение...',
+      action: 'Анализ',
+      loading: 'Анализируем...',
+      idiomatic: 'Перевод',
+      literal: 'Дословный перевод',
+      breakdown: 'Грамматика',
+    },
   }[lang as SourceLang];
 
   return (
-    <div className="glass-panel p-6 rounded-lg border border-cyan/30 mt-8 relative overflow-hidden shadow-2xl">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-2 h-2 bg-cyan animate-pulse shadow-[0_0_8px_#00D9FF]"></div>
-        <h3 className="font-heading text-cyan uppercase tracking-tighter text-lg">{localized.title}</h3>
+    <div
+      className="p-4 rounded-2xl space-y-4"
+      style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+    >
+      {/* Title */}
+      <div className="flex items-center gap-2">
+        <span className="text-lg">🔬</span>
+        <p className="font-bold text-sm">{labels.title}</p>
       </div>
 
-      <div className="flex gap-2 mb-8">
-        <input 
-          type="text" 
+      {/* Input row */}
+      <div className="flex gap-2">
+        <input
+          type="text"
           value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder={localized.placeholder}
-          className="flex-1 bg-dark/60 border border-cyan/20 p-3 rounded font-body text-white focus:border-cyan focus:outline-none transition-all"
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleDecode()}
+          placeholder={labels.placeholder}
+          className="app-input flex-1 text-sm"
         />
-        <NeonButton variant="cyan" onClick={handleDecode} disabled={loading}>
-          {loading ? '...' : localized.action}
-        </NeonButton>
+        <button
+          onClick={handleDecode}
+          disabled={loading || !input.trim()}
+          className="btn-primary px-4 py-2 text-sm shrink-0"
+          style={{ opacity: loading || !input.trim() ? 0.5 : 1 }}
+        >
+          {labels.action}
+        </button>
       </div>
 
+      {/* Loading */}
       {loading && (
-        <div className="py-10 flex flex-col items-center justify-center space-y-4">
-          <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
-            <div className="h-full bg-cyan animate-[loading_2s_ease-in-out_infinite] shadow-[0_0_10px_#00D9FF]"></div>
-          </div>
-          <p className="font-mono text-[10px] text-cyan/50 animate-pulse tracking-[0.3em]">ANALYSING_GRAMMAR_STRUCTURE...</p>
+        <div className="flex items-center gap-3 py-4 justify-center">
+          <div
+            className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin"
+            style={{ borderColor: 'var(--secondary) transparent transparent transparent' }}
+          />
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{labels.loading}</p>
         </div>
       )}
 
+      {/* Result */}
       {result && !loading && (
-        <div className="animate-in fade-in slide-in-from-top-4 duration-500">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div className="p-4 bg-dark/40 border-l-2 border-magenta rounded">
-              <span className="text-[10px] font-mono text-magenta/50 uppercase block mb-1">{localized.idiomatic}</span>
-              <p className="text-white text-lg">{result.translation}</p>
+        <div className="space-y-4 animate-fadeInUp">
+          {/* Translations */}
+          <div className="grid grid-cols-1 gap-3">
+            <div
+              className="p-3 rounded-xl"
+              style={{
+                background: 'rgba(249,115,22,0.06)',
+                border: '1px solid rgba(249,115,22,0.15)',
+                borderLeft: '3px solid var(--primary)',
+              }}
+            >
+              <p className="text-xs font-semibold mb-1" style={{ color: 'var(--primary)' }}>
+                {labels.idiomatic}
+              </p>
+              <p className="font-medium text-sm">{result.translation}</p>
             </div>
-            <div className="p-4 bg-dark/40 border-l-2 border-cyan/50 rounded">
-              <span className="text-[10px] font-mono text-cyan/30 uppercase block mb-1">{localized.literal}</span>
-              <p className="text-white/60 italic text-lg">{result.literalTranslation}</p>
+            <div
+              className="p-3 rounded-xl"
+              style={{
+                background: 'rgba(56,189,248,0.05)',
+                border: '1px solid rgba(56,189,248,0.12)',
+                borderLeft: '3px solid var(--secondary)',
+              }}
+            >
+              <p className="text-xs font-semibold mb-1" style={{ color: 'var(--secondary)' }}>
+                {labels.literal}
+              </p>
+              <p className="text-sm italic" style={{ color: 'var(--text-muted)' }}>
+                {result.literalTranslation}
+              </p>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <span className="text-[10px] font-mono text-cyan/30 uppercase block">Syntaktisk Nedbrytning</span>
-            <div className="flex flex-wrap gap-4">
-              {result.breakdown.map((item, i) => (
-                <div key={i} className="group relative">
-                  <div className="p-3 bg-white/5 border border-white/10 rounded hover:border-cyan/50 transition-all cursor-default min-w-[100px]">
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <span className="text-cyan font-bold">{item.word}</span>
+          {/* Word breakdown */}
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--text-muted)' }}>
+              {labels.breakdown}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {result.breakdown.map((item, i) => {
+                const color = getTypeColor(item.type);
+                const isActive = activeWord === i;
+                return (
+                  <button
+                    key={i}
+                    onClick={() => setActiveWord(isActive ? null : i)}
+                    className="px-3 py-2 rounded-xl transition-all text-left"
+                    style={{
+                      background: isActive ? `${color}15` : 'rgba(255,255,255,0.04)',
+                      border: `1px solid ${isActive ? color : 'var(--border)'}`,
+                    }}
+                  >
+                    <div className="flex items-center gap-1.5 mb-0.5">
                       <TTSButton text={item.word} size="sm" />
+                      <span className="font-bold text-sm" style={{ color: isActive ? color : 'var(--text)' }}>
+                        {item.word}
+                      </span>
                     </div>
-                    <span className="text-[9px] font-mono text-magenta/70 uppercase block">{item.type}</span>
-                  </div>
-                  {/* Tooltip-style explanation */}
-                  <div className="absolute top-full left-0 mt-2 w-48 p-3 bg-dark border border-cyan/40 rounded shadow-2xl z-50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                    <p className="text-[11px] text-white/80 leading-snug">{item.analysis}</p>
-                  </div>
-                </div>
-              ))}
+                    <span
+                      className="text-xs font-semibold"
+                      style={{ color }}
+                    >
+                      {item.type}
+                    </span>
+                    {isActive && (
+                      <p className="text-xs mt-1 leading-snug" style={{ color: 'var(--text-muted)' }}>
+                        {item.analysis}
+                      </p>
+                    )}
+                  </button>
+                );
+              })}
             </div>
+            {activeWord === null && (
+              <p className="text-xs mt-2" style={{ color: 'var(--text-faint)' }}>
+                Trykk på et ord for detaljer
+              </p>
+            )}
           </div>
         </div>
       )}
-      
-      <style>{`
-        @keyframes loading {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-      `}</style>
     </div>
   );
 };

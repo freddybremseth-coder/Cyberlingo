@@ -1,19 +1,12 @@
-
 import React, { useState, useMemo } from 'react';
-import { getVerbDetails, getVerbSentenceExamples } from '../services/geminiService';
+import { getVerbDetails } from '../services/geminiService';
 import { VerbData, SourceLang } from '../types';
-import NeonButton from './NeonButton';
 import NeuralDecoder from './NeuralDecoder';
 import TTSButton from './TTSButton';
 
 interface VerbEntry {
   name: string;
   type: '-ar' | '-er' | '-ir' | 'irregular';
-}
-
-interface SentenceExample {
-  spanish: string;
-  norwegian: string;
 }
 
 const VERB_LIST: VerbEntry[] = [
@@ -41,10 +34,17 @@ const VERB_LIST: VerbEntry[] = [
   { name: 'Poner', type: 'irregular' },
   { name: 'Salir', type: 'irregular' },
   { name: 'Dormir', type: 'irregular' },
-  { name: 'Pensar', type: 'irregular' }
+  { name: 'Pensar', type: 'irregular' },
 ];
 
 type FilterType = 'all' | '-ar' | '-er' | '-ir' | 'irregular';
+
+const TYPE_COLORS: Record<VerbEntry['type'], string> = {
+  '-ar': 'var(--primary)',
+  '-er': 'var(--secondary)',
+  '-ir': 'var(--accent)',
+  'irregular': 'var(--warning)',
+};
 
 interface VerbModeProps {
   lang?: SourceLang;
@@ -55,7 +55,6 @@ const VerbMode: React.FC<VerbModeProps> = ({ lang = 'no' }) => {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [verbData, setVerbData] = useState<VerbData | null>(null);
   const [loading, setLoading] = useState(false);
-  const [isIndexOpen, setIsIndexOpen] = useState(true);
 
   const filteredVerbs = useMemo(() => {
     if (activeFilter === 'all') return VERB_LIST;
@@ -65,6 +64,7 @@ const VerbMode: React.FC<VerbModeProps> = ({ lang = 'no' }) => {
   const handleVerbSelect = async (verb: string) => {
     setSelectedVerb(verb);
     setLoading(true);
+    setVerbData(null);
     try {
       const data = await getVerbDetails(verb, lang as SourceLang);
       setVerbData(data);
@@ -77,126 +77,175 @@ const VerbMode: React.FC<VerbModeProps> = ({ lang = 'no' }) => {
 
   const labels = {
     no: {
-      title: 'Verb Database',
+      title: 'Verbtrening',
+      sub: '25 essensielle spanske verb',
       filterAll: 'Alle',
-      filterAr: '-AR',
-      filterEr: '-ER',
-      filterIr: '-IR',
       filterIrreg: 'Uregelrett',
-      search: 'Søk verb...',
+      loading: 'Henter verbdata...',
       conjugation: 'Bøyning',
-      analysis: 'Analyse',
-      loading: 'Dekrypterer verb-data...'
+      analysis: 'Setningsanalyse',
     },
     ru: {
-      title: 'База Глаголов',
+      title: 'Тренировка глаголов',
+      sub: '25 ключевых испанских глаголов',
       filterAll: 'Все',
-      filterAr: '-AR',
-      filterEr: '-ER',
-      filterIr: '-IR',
       filterIrreg: 'Неправильные',
-      search: 'Поиск глагола...',
+      loading: 'Загрузка...',
       conjugation: 'Спряжение',
-      analysis: 'Анализ',
-      loading: 'Декодирование данных глагола...'
-    }
+      analysis: 'Анализ предложений',
+    },
   }[lang as SourceLang];
 
+  const filters: { id: FilterType; label: string }[] = [
+    { id: 'all', label: labels.filterAll },
+    { id: '-ar', label: '-AR' },
+    { id: '-er', label: '-ER' },
+    { id: '-ir', label: '-IR' },
+    { id: 'irregular', label: labels.filterIrreg },
+  ];
+
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in duration-500">
-      <div className="mb-8">
-        <h1 className="text-4xl font-heading text-cyan neon-text-cyan mb-2 uppercase">{labels.title}</h1>
-        <p className="text-white/40 text-sm font-mono uppercase tracking-widest">System_Access: Verb_Matrix_v4.0</p>
+    <div className="animate-fadeIn space-y-5">
+      {/* Header */}
+      <div>
+        <h2 className="text-2xl font-black mb-1">{labels.title}</h2>
+        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{labels.sub}</p>
       </div>
 
-      <div className="glass-panel rounded-lg border border-cyan/20 overflow-hidden">
-        <div className="p-4 border-b border-white/5 flex flex-wrap gap-2">
-          {(['all', '-ar', '-er', '-ir', 'irregular'] as FilterType[]).map((f) => (
-            <button
-              key={f}
-              onClick={() => setActiveFilter(f)}
-              className={`px-3 py-1 text-[10px] font-mono border rounded transition-all uppercase ${activeFilter === f ? 'border-cyan text-cyan bg-cyan/10 shadow-[0_0_10px_rgba(0,217,255,0.2)]' : 'border-white/10 text-white/40 hover:border-white/30'}`}
-            >
-              {labels[`filter${f.charAt(0).toUpperCase() + f.slice(1).replace('-', '')}` as keyof typeof labels]}
-            </button>
-          ))}
-        </div>
-        
-        <div className="p-4 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3 bg-dark/40 max-h-[300px] overflow-y-auto custom-scrollbar">
-          {filteredVerbs.map(v => (
-            <button 
-              key={v.name} 
-              onClick={() => handleVerbSelect(v.name)} 
-              className={`
-                text-left p-3 rounded border transition-all relative group
-                ${selectedVerb === v.name ? 'border-cyan text-cyan bg-cyan/10' : 'border-white/5 text-white/50 hover:bg-white/5 hover:border-white/20'}
-              `}
-            >
-              <span className="text-sm font-heading">{v.name}</span>
-              <span className="absolute bottom-1 right-1 text-[8px] opacity-30 font-mono">{v.type}</span>
-            </button>
-          ))}
+      {/* Filter tabs */}
+      <div className="flex gap-2 flex-wrap">
+        {filters.map(f => (
+          <button
+            key={f.id}
+            onClick={() => setActiveFilter(f.id)}
+            className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
+            style={{
+              background: activeFilter === f.id
+                ? (f.id === 'all' ? 'var(--primary)' : TYPE_COLORS[f.id as VerbEntry['type']] ?? 'var(--primary)')
+                : 'var(--bg-card)',
+              color: activeFilter === f.id ? 'white' : 'var(--text-muted)',
+              border: `1px solid ${activeFilter === f.id ? 'transparent' : 'var(--border)'}`,
+            }}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Verb grid */}
+      <div
+        className="p-4 rounded-2xl"
+        style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+      >
+        <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
+          {filteredVerbs.map(v => {
+            const color = TYPE_COLORS[v.type];
+            const isSelected = selectedVerb === v.name;
+            return (
+              <button
+                key={v.name}
+                onClick={() => handleVerbSelect(v.name)}
+                className="p-3 rounded-xl text-left transition-all relative"
+                style={{
+                  background: isSelected ? `${color}15` : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${isSelected ? color : 'var(--border)'}`,
+                  boxShadow: isSelected ? `0 0 12px ${color}30` : 'none',
+                }}
+              >
+                <p
+                  className="font-bold text-sm"
+                  style={{ color: isSelected ? color : 'var(--text)' }}
+                >
+                  {v.name}
+                </p>
+                <p
+                  className="text-xs mt-0.5"
+                  style={{ color: isSelected ? color : 'var(--text-faint)' }}
+                >
+                  {v.type}
+                </p>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {loading ? (
-        <div className="p-20 flex flex-col items-center justify-center space-y-4">
-          <div className="w-10 h-10 border-4 border-magenta border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-magenta font-mono text-xs animate-pulse uppercase tracking-[0.2em]">{labels.loading}</p>
+      {/* Verb detail */}
+      {loading && (
+        <div className="flex flex-col items-center justify-center py-12 gap-3">
+          <div
+            className="w-10 h-10 rounded-full border-4 border-t-transparent animate-spin"
+            style={{ borderColor: 'var(--warning) transparent transparent transparent' }}
+          />
+          <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>{labels.loading}</p>
         </div>
-      ) : verbData && (
-        <div className="space-y-8 animate-in slide-in-from-bottom-6 duration-700">
-          <div className="glass-panel p-8 rounded-lg border border-magenta/30 relative">
-             <div className="absolute top-4 right-8 flex gap-4">
-                <TTSButton text={verbData.infinitive} />
-             </div>
-            <div className="mb-10">
-              <h2 className="text-5xl font-heading mb-2">{verbData.infinitive}</h2>
-              <p className="text-magenta font-mono text-lg uppercase tracking-widest">{verbData.meaning}</p>
-            </div>
+      )}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-              {verbData.conjugations.map((conj, idx) => (
-                <div key={idx} className="bg-dark/60 border border-white/5 p-6 rounded-lg group hover:border-cyan/30 transition-all">
-                  <h4 className="text-cyan text-[10px] font-mono uppercase mb-4 tracking-widest border-b border-white/5 pb-2">{conj.tense}</h4>
-                  <div className="space-y-3 font-body">
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-white/30 font-mono text-[10px]">Yo</span>
-                      <span className="text-white font-medium">{conj.yo}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-white/30 font-mono text-[10px]">Tú</span>
-                      <span className="text-white font-medium">{conj.tu}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-white/30 font-mono text-[10px]">Él/Ella</span>
-                      <span className="text-white font-medium">{conj.el}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm border-t border-white/5 pt-2">
-                      <span className="text-white/30 font-mono text-[10px]">Nos.</span>
-                      <span className="text-white font-medium">{conj.nosotros}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-white/30 font-mono text-[10px]">Vos.</span>
-                      <span className="text-white font-medium">{conj.vosotros}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-white/30 font-mono text-[10px]">Ellos</span>
-                      <span className="text-white font-medium">{conj.ellos}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-12">
-               <h3 className="text-cyan font-heading text-xs uppercase mb-6 tracking-widest border-b border-cyan/20 pb-2">{labels.analysis}</h3>
-               <NeuralDecoder 
-                initialSentence={`Hoy yo ${verbData.conjugations[0]?.yo || 'como'} con mis amigos.`} 
-                lang={lang} 
-              />
+      {verbData && !loading && (
+        <div className="space-y-4 animate-fadeInUp">
+          {/* Infinitive + meaning */}
+          <div
+            className="p-5 rounded-2xl"
+            style={{
+              background: 'linear-gradient(135deg, rgba(251,191,36,0.06) 0%, rgba(249,115,22,0.04) 100%)',
+              border: '1px solid rgba(251,191,36,0.2)',
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <TTSButton text={verbData.infinitive} />
+              <div>
+                <p className="text-3xl font-black">{verbData.infinitive}</p>
+                <p className="text-sm font-medium mt-0.5" style={{ color: 'var(--warning)' }}>
+                  {verbData.meaning}
+                </p>
+              </div>
             </div>
           </div>
+
+          {/* Conjugation tables */}
+          <h3 className="font-bold text-sm uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+            {labels.conjugation}
+          </h3>
+          <div className="grid gap-3">
+            {verbData.conjugations.map((conj, idx) => (
+              <div
+                key={idx}
+                className="p-4 rounded-2xl"
+                style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+              >
+                <p
+                  className="text-xs font-bold uppercase tracking-widest mb-3"
+                  style={{ color: 'var(--secondary)' }}
+                >
+                  {conj.tense}
+                </p>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                  {[
+                    ['Yo', conj.yo],
+                    ['Tú', conj.tu],
+                    ['Él/Ella', conj.el],
+                    ['Nosotros', conj.nosotros],
+                    ['Vosotros', conj.vosotros],
+                    ['Ellos', conj.ellos],
+                  ].map(([pronoun, form]) => (
+                    <div key={pronoun} className="flex justify-between items-center">
+                      <span className="text-xs font-mono" style={{ color: 'var(--text-faint)' }}>{pronoun}</span>
+                      <span className="font-semibold text-sm">{form}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Sentence analysis */}
+          <h3 className="font-bold text-sm uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+            {labels.analysis}
+          </h3>
+          <NeuralDecoder
+            initialSentence={`Hoy yo ${verbData.conjugations[0]?.yo || 'como'} con mis amigos.`}
+            lang={lang as SourceLang}
+          />
         </div>
       )}
     </div>
