@@ -49,6 +49,15 @@ const openaiPost = (key: string, body: object): Promise<Response> =>
     body: JSON.stringify(body),
   });
 
+/**
+ * Strip markdown code fences from AI JSON responses.
+ * Models sometimes wrap JSON in ```json ... ``` even when told not to.
+ */
+const stripJSON = (text: string): string => {
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  return (fenced ? fenced[1] : text).trim();
+};
+
 /** Generate plain text with any provider */
 const callText = async (systemPrompt: string, userPrompt: string, temp = 0.7): Promise<string> => {
   const key = getStoredApiKey();
@@ -104,7 +113,7 @@ const callJSON = async (systemPrompt: string, userPrompt: string): Promise<strin
     });
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error?.message || 'Claude API feil');
-    return data.content[0].text;
+    return stripJSON(data.content[0].text);
   }
 
   // OpenAI JSON mode
@@ -119,7 +128,7 @@ const callJSON = async (systemPrompt: string, userPrompt: string): Promise<strin
   });
   const data = await resp.json();
   if (!resp.ok) throw new Error(data.error?.message || 'OpenAI API feil');
-  return data.choices[0].message.content;
+  return stripJSON(data.choices[0].message.content);
 };
 
 // ─── Audio helpers ─────────────────────────────────────────────────────────
@@ -267,7 +276,7 @@ export const analyzeVision = async (base64Image: string, lang: SourceLang = 'no'
         },
       },
     });
-    return JSON.parse(response.text || '[]');
+    return JSON.parse(stripJSON(response.text || '[]'));
   }
 
   const jsonPrompt = promptText + ' Return JSON array: [{"spanish":"...","translation":"...","example":"...","pronunciation":"..."}]';
@@ -286,7 +295,7 @@ export const analyzeVision = async (base64Image: string, lang: SourceLang = 'no'
       }],
     });
     const data = await resp.json();
-    const parsed = JSON.parse(data.choices[0].message.content);
+    const parsed = JSON.parse(stripJSON(data.choices[0].message.content));
     return Array.isArray(parsed) ? parsed : (parsed.objects || parsed.items || []);
   }
 
@@ -305,7 +314,7 @@ export const analyzeVision = async (base64Image: string, lang: SourceLang = 'no'
   });
   const data = await resp.json();
   if (!resp.ok) throw new Error(data.error?.message || 'Claude API feil');
-  return JSON.parse(data.content[0].text || '[]');
+  return JSON.parse(stripJSON(data.content[0].text || '[]'));
 };
 
 // ─── Grammar explanation ───────────────────────────────────────────────────
@@ -350,14 +359,14 @@ export const analyzeSentence = async (sentence: string, lang: SourceLang = 'no')
         },
       },
     });
-    return JSON.parse(response.text || '{}');
+    return JSON.parse(stripJSON(response.text || '{}'));
   }
 
   const text = await callJSON(
     `You are a Spanish grammar expert. Use ${langLabel} for explanations.`,
     `Analyze this Spanish sentence: "${sentence}". Return JSON: {"translation":"${langLabel} translation","literalTranslation":"literal ${langLabel} translation","breakdown":[{"word":"...","analysis":"${langLabel} explanation","type":"grammatical type"}]}`,
   );
-  return JSON.parse(text);
+  return JSON.parse(stripJSON(text));
 };
 
 // ─── Quiz generation ───────────────────────────────────────────────────────
@@ -388,14 +397,14 @@ export const generateQuiz = async (topic: string, count = 5, level = 1, lang: So
         },
       },
     });
-    return JSON.parse(response.text || '[]');
+    return JSON.parse(stripJSON(response.text || '[]'));
   }
 
   const text = await callJSON(
     `You are a Spanish teacher. Generate quiz questions. Use ${langLabel} for explanations.`,
     prompt + ` Return JSON array: [{"question":"...","options":["A","B","C","D"],"correctAnswer":"correct option text","explanation":"${langLabel} explanation"}]`,
   );
-  const parsed = JSON.parse(text);
+  const parsed = JSON.parse(stripJSON(text));
   return Array.isArray(parsed) ? parsed : (parsed.questions || []);
 };
 
@@ -436,14 +445,14 @@ export const getVerbDetails = async (verb: string, lang: SourceLang = 'no') => {
         },
       },
     });
-    return JSON.parse(response.text || '{}');
+    return JSON.parse(stripJSON(response.text || '{}'));
   }
 
   const text = await callJSON(
     'You are a Spanish language expert.',
     prompt + ' Return JSON: {"infinitive":"...","meaning":"...","conjugations":[{"tense":"Presente","yo":"...","tu":"...","el":"...","nosotros":"...","vosotros":"...","ellos":"..."},{"tense":"Pretérito","yo":"...","tu":"...","el":"...","nosotros":"...","vosotros":"...","ellos":"..."},{"tense":"Imperfecto","yo":"...","tu":"...","el":"...","nosotros":"...","vosotros":"...","ellos":"..."}]}',
   );
-  return JSON.parse(text);
+  return JSON.parse(stripJSON(text));
 };
 
 // ─── Verb example sentences ────────────────────────────────────────────────
@@ -471,14 +480,14 @@ export const getVerbSentenceExamples = async (verb: string, lang: SourceLang = '
         },
       },
     });
-    return JSON.parse(response.text || '[]');
+    return JSON.parse(stripJSON(response.text || '[]'));
   }
 
   const text = await callJSON(
     'You are a Spanish teacher.',
     prompt + ' Return JSON array: [{"spanish":"...","translation":"..."}]',
   );
-  const parsed = JSON.parse(text);
+  const parsed = JSON.parse(stripJSON(text));
   return Array.isArray(parsed) ? parsed : (parsed.sentences || parsed.examples || []);
 };
 
@@ -509,14 +518,14 @@ export const getVocabBatch = async (category: string, lang: SourceLang = 'no') =
         },
       },
     });
-    return JSON.parse(response.text || '[]');
+    return JSON.parse(stripJSON(response.text || '[]'));
   }
 
   const text = await callJSON(
     'You are a Spanish vocabulary expert.',
     prompt + ' Return JSON array of exactly 50 items: [{"spanish":"...","translation":"...","pronunciation":"phonetic guide"}]',
   );
-  const parsed = JSON.parse(text);
+  const parsed = JSON.parse(stripJSON(text));
   return Array.isArray(parsed) ? parsed : (parsed.words || parsed.vocabulary || []);
 };
 
@@ -547,14 +556,14 @@ export const getPhraseBatch = async (category: string, lang: SourceLang = 'no') 
         },
       },
     });
-    return JSON.parse(response.text || '[]');
+    return JSON.parse(stripJSON(response.text || '[]'));
   }
 
   const text = await callJSON(
     'You are a Spanish language expert.',
     prompt + ' Return JSON array of exactly 50 items: [{"spanish":"...","translation":"...","context":"when/how to use this phrase"}]',
   );
-  const parsed = JSON.parse(text);
+  const parsed = JSON.parse(stripJSON(text));
   return Array.isArray(parsed) ? parsed : (parsed.phrases || []);
 };
 
@@ -656,12 +665,12 @@ export const getDailyWord = async (lang: SourceLang = 'no'): Promise<{
         },
       },
     });
-    return JSON.parse(response.text || '{}');
+    return JSON.parse(stripJSON(response.text || '{}'));
   }
 
   const text = await callJSON(
     'You are a Spanish vocabulary teacher.',
     prompt + ' Return JSON: {"word":"...","translation":"...","example":"Spanish example sentence","pronunciation":"phonetic guide"}',
   );
-  return JSON.parse(text);
+  return JSON.parse(stripJSON(text));
 };
