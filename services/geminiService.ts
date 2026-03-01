@@ -58,6 +58,19 @@ const stripJSON = (text: string): string => {
   return (fenced ? fenced[1] : text).trim();
 };
 
+/**
+ * Robustly extract an array from a parsed JSON value.
+ * Handles: direct array, object wrapping (any key), or empty fallback.
+ */
+const extractArray = (parsed: unknown): unknown[] => {
+  if (Array.isArray(parsed)) return parsed;
+  if (parsed && typeof parsed === 'object') {
+    const arr = Object.values(parsed as Record<string, unknown>).find(v => Array.isArray(v));
+    if (arr) return arr as unknown[];
+  }
+  return [];
+};
+
 /** Generate plain text with any provider */
 const callText = async (systemPrompt: string, userPrompt: string, temp = 0.7): Promise<string> => {
   const key = getStoredApiKey();
@@ -116,11 +129,10 @@ const callJSON = async (systemPrompt: string, userPrompt: string): Promise<strin
     return stripJSON(data.content[0].text);
   }
 
-  // OpenAI JSON mode
+  // OpenAI – no json_object mode so arrays can be returned directly
   const resp = await openaiPost(key, {
     model: 'gpt-4o-mini',
     max_tokens: 2048,
-    response_format: { type: 'json_object' },
     messages: [
       { role: 'system', content: sys },
       { role: 'user', content: userPrompt },
@@ -285,7 +297,6 @@ export const analyzeVision = async (base64Image: string, lang: SourceLang = 'no'
     const resp = await openaiPost(key, {
       model: 'gpt-4o',
       max_tokens: 1024,
-      response_format: { type: 'json_object' },
       messages: [{
         role: 'user',
         content: [
@@ -295,8 +306,7 @@ export const analyzeVision = async (base64Image: string, lang: SourceLang = 'no'
       }],
     });
     const data = await resp.json();
-    const parsed = JSON.parse(stripJSON(data.choices[0].message.content));
-    return Array.isArray(parsed) ? parsed : (parsed.objects || parsed.items || []);
+    return extractArray(JSON.parse(stripJSON(data.choices[0].message.content)));
   }
 
   // Claude vision
@@ -402,10 +412,9 @@ export const generateQuiz = async (topic: string, count = 5, level = 1, lang: So
 
   const text = await callJSON(
     `You are a Spanish teacher. Generate quiz questions. Use ${langLabel} for explanations.`,
-    prompt + ` Return JSON array: [{"question":"...","options":["A","B","C","D"],"correctAnswer":"correct option text","explanation":"${langLabel} explanation"}]`,
+    prompt + ` Return a JSON array: [{"question":"...","options":["A","B","C","D"],"correctAnswer":"correct option text","explanation":"${langLabel} explanation"}]`,
   );
-  const parsed = JSON.parse(stripJSON(text));
-  return Array.isArray(parsed) ? parsed : (parsed.questions || []);
+  return extractArray(JSON.parse(stripJSON(text)));
 };
 
 // ─── Verb details ──────────────────────────────────────────────────────────
@@ -485,10 +494,9 @@ export const getVerbSentenceExamples = async (verb: string, lang: SourceLang = '
 
   const text = await callJSON(
     'You are a Spanish teacher.',
-    prompt + ' Return JSON array: [{"spanish":"...","translation":"..."}]',
+    prompt + ' Return a JSON array: [{"spanish":"...","translation":"..."}]',
   );
-  const parsed = JSON.parse(stripJSON(text));
-  return Array.isArray(parsed) ? parsed : (parsed.sentences || parsed.examples || []);
+  return extractArray(JSON.parse(stripJSON(text)));
 };
 
 // ─── Vocabulary batch ──────────────────────────────────────────────────────
@@ -523,10 +531,9 @@ export const getVocabBatch = async (category: string, lang: SourceLang = 'no') =
 
   const text = await callJSON(
     'You are a Spanish vocabulary expert.',
-    prompt + ' Return JSON array of exactly 50 items: [{"spanish":"...","translation":"...","pronunciation":"phonetic guide"}]',
+    prompt + ' Return a JSON array of exactly 50 items: [{"spanish":"...","translation":"...","pronunciation":"phonetic guide"}]',
   );
-  const parsed = JSON.parse(stripJSON(text));
-  return Array.isArray(parsed) ? parsed : (parsed.words || parsed.vocabulary || []);
+  return extractArray(JSON.parse(stripJSON(text)));
 };
 
 // ─── Phrase batch ──────────────────────────────────────────────────────────
@@ -561,10 +568,9 @@ export const getPhraseBatch = async (category: string, lang: SourceLang = 'no') 
 
   const text = await callJSON(
     'You are a Spanish language expert.',
-    prompt + ' Return JSON array of exactly 50 items: [{"spanish":"...","translation":"...","context":"when/how to use this phrase"}]',
+    prompt + ' Return a JSON array of exactly 50 items: [{"spanish":"...","translation":"...","context":"when/how to use this phrase"}]',
   );
-  const parsed = JSON.parse(stripJSON(text));
-  return Array.isArray(parsed) ? parsed : (parsed.phrases || []);
+  return extractArray(JSON.parse(stripJSON(text)));
 };
 
 // ─── Conversation practice ─────────────────────────────────────────────────
