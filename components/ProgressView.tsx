@@ -207,7 +207,7 @@ const ProgressView: React.FC<Props> = ({ user, lang = 'no' }) => {
         style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
       >
         <div className="flex justify-between items-center mb-2">
-          <p className="font-bold text-sm">Nivå {user.level} → {user.level + 1}</p>
+          <p className="font-bold text-sm">{labels.currentLevel}: {user.level} → {user.level + 1}</p>
           <span className="badge badge-primary text-xs">{xp.current}/{xp.needed} XP</span>
         </div>
         <div className="progress-track">
