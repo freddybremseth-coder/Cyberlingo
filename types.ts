@@ -18,6 +18,7 @@ export interface SubscriptionStatus {
 
 export interface UserProfile {
   username: string;
+  email: string;
   sourceLang: SourceLang;
   completedLessonIds: string[];
   masteredVocab: string[];
@@ -44,6 +45,9 @@ export interface UserProfile {
 
   // Conversation practice count
   conversationsCompleted: number;
+
+  // Free trial task usage
+  freeTasksUsed: number;
 }
 
 export interface LessonContent {
@@ -337,7 +341,9 @@ export const getXpProgress = (xp: number): { current: number; needed: number; pc
 
 // ─── Subscription helpers ──────────────────────────────────────────────────
 export const TRIAL_DAYS = 7;
+export const TRIAL_FREE_TASKS = 4;
 export const SUBSCRIPTION_PRICE_NOK = 30;
+export const ADMIN_EMAIL = 'freddy.bremseth@gmail.com';
 
 export const getTrialDaysLeft = (sub: SubscriptionStatus): number => {
   if (sub.plan !== 'trial') return 0;
@@ -345,8 +351,15 @@ export const getTrialDaysLeft = (sub: SubscriptionStatus): number => {
   return Math.max(0, Math.ceil(msLeft / 86400_000));
 };
 
-export const isSubscriptionActive = (sub: SubscriptionStatus): boolean => {
-  if (sub.plan === 'trial') return getTrialDaysLeft(sub) > 0;
+export const getTrialTasksLeft = (user: UserProfile): number => {
+  if (user.email === ADMIN_EMAIL) return 999;
+  if (user.subscription.plan !== 'trial') return 0;
+  return Math.max(0, TRIAL_FREE_TASKS - (user.freeTasksUsed ?? 0));
+};
+
+export const isSubscriptionActive = (sub: SubscriptionStatus, email?: string): boolean => {
+  if (email === ADMIN_EMAIL) return true;
+  if (sub.plan === 'trial') return true; // task limit checked separately
   if (sub.plan === 'monthly' || sub.plan === 'yearly') {
     if (sub.stripeStatus && sub.stripeStatus !== 'active') return false;
     if (sub.currentPeriodEnd) return Date.now() < sub.currentPeriodEnd;

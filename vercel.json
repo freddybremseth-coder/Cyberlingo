@@ -1,6 +1,7 @@
 {
   "rewrites": [
+    { "source": "/landing", "destination": "/landing.html" },
     { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/((?!api).*)", "destination": "/index.html" }
+    { "source": "/((?!api|landing.html|assets|.*\\.(?:png|jpg|jpeg|gif|svg|ico|css|js)).*)", "destination": "/index.html" }
   ]
 }

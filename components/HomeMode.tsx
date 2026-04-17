@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { UserProfile, AppTab, LearnMode, SourceLang, getXpProgress, getTrialDaysLeft, isSubscriptionActive, LEVEL_THRESHOLDS } from '../types';
+import { UserProfile, AppTab, LearnMode, SourceLang, getXpProgress, getTrialTasksLeft, isSubscriptionActive, LEVEL_THRESHOLDS, TRIAL_FREE_TASKS } from '../types';
 import { INITIAL_LESSONS } from '../data/lessons';
 
 interface Props {
@@ -184,8 +184,8 @@ const HomeMode: React.FC<Props> = ({ user, lang, onNavigate, onNavigateLearn, on
     ? Math.round((user.completedLessonIds.length / INITIAL_LESSONS.length) * 100)
     : 0;
   const vocabProgress = Math.round((user.masteredVocab.length / 500) * 100);
-  const subActive = isSubscriptionActive(user.subscription);
-  const trialLeft = user.subscription.plan === 'trial' ? getTrialDaysLeft(user.subscription) : null;
+  const subActive = isSubscriptionActive(user.subscription, user.email);
+  const tasksLeft = user.subscription.plan === 'trial' ? getTrialTasksLeft(user) : null;
 
   const today = new Date().toISOString().slice(0, 10);
   const goalMet = user.lastGoalDate === today && user.todayXp >= user.dailyGoalXp;
@@ -195,15 +195,20 @@ const HomeMode: React.FC<Props> = ({ user, lang, onNavigate, onNavigateLearn, on
     <div className="p-4 pb-24 space-y-5 animate-fadeIn">
 
       {/* ── Trial banner ── */}
-      {trialLeft !== null && trialLeft <= 3 && trialLeft > 0 && (
+      {tasksLeft !== null && tasksLeft <= 2 && (
         <div
           className="p-3 rounded-2xl flex items-center gap-3"
-          style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.25)' }}
+          style={{
+            background: tasksLeft === 0 ? 'rgba(248,113,113,0.1)' : 'rgba(251,191,36,0.1)',
+            border: `1px solid ${tasksLeft === 0 ? 'rgba(248,113,113,0.3)' : 'rgba(251,191,36,0.25)'}`,
+          }}
         >
-          <span className="text-xl">⏳</span>
+          <span className="text-xl">{tasksLeft === 0 ? '⚠️' : '⏳'}</span>
           <div>
-            <p className="text-sm font-semibold" style={{ color: 'var(--warning)' }}>
-              {labels.trialLeft(trialLeft!)}
+            <p className="text-sm font-semibold" style={{ color: tasksLeft === 0 ? 'var(--danger)' : 'var(--warning)' }}>
+              {tasksLeft === 0
+                ? 'Du har brukt alle gratis oppgaver'
+                : `${tasksLeft} av ${TRIAL_FREE_TASKS} gratis oppgaver igjen`}
             </p>
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{labels.subscribeHint}</p>
           </div>

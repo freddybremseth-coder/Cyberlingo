@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserProfile, TRIAL_DAYS, getTrialDaysLeft } from '../types';
+import { UserProfile, TRIAL_FREE_TASKS, getTrialTasksLeft } from '../types';
 
 interface Props {
   user: UserProfile;
@@ -11,8 +11,8 @@ const SubscriptionModal: React.FC<Props> = ({ user, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const trialLeft = getTrialDaysLeft(user.subscription);
-  const trialExpired = user.subscription.plan === 'trial' && trialLeft === 0;
+  const tasksLeft = getTrialTasksLeft(user);
+  const trialExpired = user.subscription.plan === 'trial' && tasksLeft === 0;
 
   const features = [
     { icon: '📖', text: 'Alle grammatikkleksjoner (A1–B2)' },
@@ -59,8 +59,8 @@ const SubscriptionModal: React.FC<Props> = ({ user, onClose }) => {
           </h2>
           <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
             {trialExpired
-              ? `Din ${TRIAL_DAYS}-dagers gratis prøveperiode er utløpt`
-              : 'Få full tilgang til alle funksjoner'}
+              ? `Du har brukt dine ${TRIAL_FREE_TASKS} gratis oppgaver`
+              : 'Få ubegrenset tilgang til alle funksjoner'}
           </p>
         </div>
 
@@ -142,7 +142,7 @@ const SubscriptionModal: React.FC<Props> = ({ user, onClose }) => {
             className="w-full py-3 text-sm font-semibold transition-opacity hover:opacity-70"
             style={{ color: 'var(--text-muted)' }}
           >
-            Fortsett prøveperioden ({trialLeft} dager igjen)
+            Fortsett prøveperioden ({tasksLeft} oppgaver igjen)
           </button>
         )}
 

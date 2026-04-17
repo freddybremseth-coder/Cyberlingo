@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   UserProfile, SourceLang, AppTab, LearnMode, SpeakMode,
   Lesson, ACHIEVEMENTS, isSubscriptionActive, todayString,
-  getLevelFromXp,
+  getLevelFromXp, getTrialTasksLeft, ADMIN_EMAIL, TRIAL_FREE_TASKS,
 } from './types';
 import { INITIAL_LESSONS } from './data/lessons';
 
@@ -22,10 +22,12 @@ import AIAssistant from './components/AIAssistant';
 import LunaLive from './components/LunaLive';
 import QuizComponent from './components/QuizComponent';
 import NeuralDecoder from './components/NeuralDecoder';
+import AdminDashboard from './components/AdminDashboard';
 
 // ─── Default user factory ──────────────────────────────────────────────────
 const createNewUser = (username: string, lang: SourceLang): UserProfile => ({
   username,
+  email: '',
   sourceLang: lang,
   completedLessonIds: [],
   masteredVocab: [],
@@ -47,6 +49,7 @@ const createNewUser = (username: string, lang: SourceLang): UserProfile => ({
   todayXp: 0,
   lastGoalDate: todayString(),
   conversationsCompleted: 0,
+  freeTasksUsed: 0,
 });
 
 // ─── Save / load helpers ───────────────────────────────────────────────────
@@ -115,6 +118,25 @@ const App: React.FC = () => {
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [showSubModal, setShowSubModal] = useState(false);
   const [needsApiKey, setNeedsApiKey] = useState(false);
+
+  const isAdmin = user?.email === ADMIN_EMAIL;
+  const hasActiveAccess = user
+    ? (user.email === ADMIN_EMAIL || isSubscriptionActive(user.subscription, user.email))
+    : false;
+
+  // Call this before every AI-powered task. Returns false if trial exhausted.
+  const useTrialTask = useCallback((): boolean => {
+    if (!user) return false;
+    if (user.email === ADMIN_EMAIL) return true;
+    if (user.subscription.plan !== 'trial') return hasActiveAccess;
+    const left = getTrialTasksLeft(user);
+    if (left <= 0) {
+      setShowSubModal(true);
+      return false;
+    }
+    setUser(prev => prev ? { ...prev, freeTasksUsed: (prev.freeTasksUsed ?? 0) + 1 } : prev);
+    return true;
+  }, [user, hasActiveAccess]);
 
   // ─── Auto-login + Stripe session handling ─────────────────────────────
   useEffect(() => {
@@ -206,6 +228,8 @@ const App: React.FC = () => {
     if (!updated.xp) updated.xp = 0;
     if (!updated.conversationsCompleted) updated.conversationsCompleted = 0;
     if (!updated.dailyGoalXp) updated.dailyGoalXp = 50;
+    if (!updated.email) updated.email = '';
+    if (updated.freeTasksUsed === undefined) updated.freeTasksUsed = 0;
 
     // Reset today's XP if it's a new day
     if (updated.lastGoalDate !== today) {
@@ -335,10 +359,12 @@ const App: React.FC = () => {
   // ─── Subscription active check ─────────────────────────────────────────
   const checkSubscription = useCallback((): boolean => {
     if (!user) return false;
-    const active = isSubscriptionActive(user.subscription);
+    if (user.email === ADMIN_EMAIL) return true;
+    if (user.subscription.plan === 'trial') return useTrialTask();
+    const active = isSubscriptionActive(user.subscription, user.email);
     if (!active) setShowSubModal(true);
     return active;
-  }, [user]);
+  }, [user, useTrialTask]);
 
   // ─── UI labels based on lang ───────────────────────────────────────────
   const ui = ({
@@ -403,7 +429,8 @@ const App: React.FC = () => {
     setSelectedLesson(null);
   };
 
-  const subActive = isSubscriptionActive(user.subscription);
+  const subActive = isSubscriptionActive(user.subscription, user.email);
+  const trialTasksLeft = getTrialTasksLeft(user);
 
   // ─── Render ────────────────────────────────────────────────────────────
   return (
@@ -435,6 +462,21 @@ const App: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Trial task counter */}
+          {user.subscription.plan === 'trial' && !isAdmin && (
+            <button
+              onClick={() => setShowSubModal(true)}
+              className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold"
+              style={{
+                background: trialTasksLeft <= 1 ? 'rgba(248,113,113,0.15)' : 'rgba(249,115,22,0.12)',
+                color: trialTasksLeft <= 1 ? 'var(--danger)' : 'var(--primary)',
+                border: `1px solid ${trialTasksLeft <= 1 ? 'rgba(248,113,113,0.3)' : 'rgba(249,115,22,0.2)'}`,
+              }}
+            >
+              {trialTasksLeft > 0 ? `${trialTasksLeft}/${TRIAL_FREE_TASKS} gratis` : '⚠️ Oppgrader'}
+            </button>
+          )}
+
           {/* Streak */}
           <div className="flex items-center gap-1">
             <span className="animate-flame text-lg">🔥</span>
@@ -697,13 +739,28 @@ const App: React.FC = () => {
         )}
 
         {/* ── PROFILE / SETTINGS ───────────────────────────────────────── */}
-        {activeTab === 'profile' && (
+        {activeTab === 'profile' && !isAdmin && (
           <div className="p-4 pb-24 animate-fadeIn">
             <SettingsScreen
               user={user}
               onLogout={handleLogout}
               onApiKeySave={handleApiKeySave}
               onSubscribe={handleSubscribe}
+              onLangChange={(l) => {
+                setSourceLang(l);
+                setUser(prev => prev ? { ...prev, sourceLang: l } : prev);
+              }}
+            />
+          </div>
+        )}
+
+        {/* ── ADMIN DASHBOARD (freddy only) ────────────────────────────── */}
+        {activeTab === 'profile' && isAdmin && (
+          <div className="p-4 pb-24 animate-fadeIn">
+            <AdminDashboard
+              user={user}
+              onLogout={handleLogout}
+              onApiKeySave={handleApiKeySave}
               onLangChange={(l) => {
                 setSourceLang(l);
                 setUser(prev => prev ? { ...prev, sourceLang: l } : prev);

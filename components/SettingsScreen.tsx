@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserProfile, SourceLang, TRIAL_DAYS, getTrialDaysLeft, isSubscriptionActive } from '../types';
+import { UserProfile, SourceLang, TRIAL_FREE_TASKS, getTrialTasksLeft, isSubscriptionActive } from '../types';
 import { setStoredApiKey, clearStoredApiKey, validateApiKey, detectProvider } from '../services/geminiService';
 
 interface Props {
@@ -72,7 +72,7 @@ const SettingsScreen: React.FC<Props> = ({ user, onLogout, onApiKeySave, onSubsc
   const [portalLoading, setPortalLoading] = useState(false);
 
   const subActive = isSubscriptionActive(user.subscription);
-  const trialLeft = user.subscription.plan === 'trial' ? getTrialDaysLeft(user.subscription) : null;
+  const tasksLeft = user.subscription.plan === 'trial' ? getTrialTasksLeft(user) : null;
   const isPaid = user.subscription.plan === 'monthly' || user.subscription.plan === 'yearly';
 
   const handleManageSubscription = async () => {
@@ -159,8 +159,8 @@ const SettingsScreen: React.FC<Props> = ({ user, onLogout, onApiKeySave, onSubsc
                 {isPaid
                   ? (user.subscription.plan === 'yearly' ? '€71.91/år • €5.99/mnd • Full tilgang' : '€7.99/mnd • Full tilgang')
                   : user.subscription.plan === 'trial'
-                  ? trialLeft !== null
-                    ? `${trialLeft} dag${trialLeft !== 1 ? 'er' : ''} igjen av prøveperioden`
+                  ? tasksLeft !== null
+                    ? `${tasksLeft} av ${TRIAL_FREE_TASKS} gratis oppgaver igjen`
                     : 'Prøveperiode aktiv'
                   : 'Ingen aktiv plan'}
               </p>
