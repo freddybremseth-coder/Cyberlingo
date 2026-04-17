@@ -116,13 +116,69 @@ const App: React.FC = () => {
   const [showSubModal, setShowSubModal] = useState(false);
   const [needsApiKey, setNeedsApiKey] = useState(false);
 
-  // ─── Auto-login ────────────────────────────────────────────────────────
+  // ─── Auto-login + Stripe session handling ─────────────────────────────
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id');
+
     const lastUser = localStorage.getItem('cyberlingo_current_user');
-    if (lastUser) {
-      const users = JSON.parse(localStorage.getItem('cyberlingo_users') || '{}');
-      if (users[lastUser]) {
-        initUser(users[lastUser]);
+    const users = JSON.parse(localStorage.getItem('cyberlingo_users') || '{}');
+
+    if (sessionId) {
+      window.history.replaceState({}, '', window.location.pathname);
+      if (lastUser && users[lastUser]) {
+        fetch(`/api/verify-session?session_id=${sessionId}`)
+          .then(r => r.json())
+          .then(data => {
+            if (data.subscriptionId) {
+              const updated = {
+                ...users[lastUser],
+                subscription: {
+                  ...users[lastUser].subscription,
+                  plan: data.plan,
+                  subscribedDate: Date.now(),
+                  stripeCustomerId: data.customerId,
+                  stripeSubscriptionId: data.subscriptionId,
+                  stripeStatus: data.status,
+                  currentPeriodEnd: data.currentPeriodEnd,
+                  cancelAtPeriodEnd: data.cancelAtPeriodEnd,
+                },
+              };
+              initUser(updated);
+            } else {
+              initUser(users[lastUser]);
+            }
+          })
+          .catch(() => initUser(users[lastUser]));
+      }
+      return;
+    }
+
+    if (lastUser && users[lastUser]) {
+      const u = users[lastUser];
+      // Re-verify subscription status from Stripe on load
+      if (u.subscription?.stripeSubscriptionId) {
+        fetch(`/api/subscription-status?subscriptionId=${u.subscription.stripeSubscriptionId}`)
+          .then(r => r.json())
+          .then(data => {
+            if (data.status) {
+              const updated = {
+                ...u,
+                subscription: {
+                  ...u.subscription,
+                  stripeStatus: data.status,
+                  currentPeriodEnd: data.currentPeriodEnd,
+                  cancelAtPeriodEnd: data.cancelAtPeriodEnd,
+                },
+              };
+              initUser(updated);
+            } else {
+              initUser(u);
+            }
+          })
+          .catch(() => initUser(u));
+      } else {
+        initUser(u);
       }
     }
   }, []);
@@ -273,22 +329,8 @@ const App: React.FC = () => {
     setNeedsApiKey(false);
   };
 
-  // ─── Subscription mock ─────────────────────────────────────────────────
-  const handleSubscribe = () => {
-    setUser(prev => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        subscription: {
-          plan: 'monthly',
-          trialStartDate: prev.subscription?.trialStartDate || Date.now(),
-          subscribedDate: Date.now(),
-          expiresAt: null,
-        },
-      };
-    });
-    setShowSubModal(false);
-  };
+  // ─── Subscription (handled by Stripe) ─────────────────────────────────
+  const handleSubscribe = () => setShowSubModal(true);
 
   // ─── Subscription active check ─────────────────────────────────────────
   const checkSubscription = useCallback((): boolean => {
@@ -370,7 +412,6 @@ const App: React.FC = () => {
       {showSubModal && (
         <SubscriptionModal
           user={user}
-          onSubscribe={handleSubscribe}
           onClose={() => setShowSubModal(false)}
         />
       )}

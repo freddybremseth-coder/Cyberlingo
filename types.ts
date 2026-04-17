@@ -5,10 +5,15 @@ export type LearnMode = 'lessons' | 'vocab' | 'verbs' | 'phrases' | 'vision';
 export type SpeakMode = 'conversation' | 'luna-live' | 'luna-text';
 
 export interface SubscriptionStatus {
-  plan: 'trial' | 'monthly' | 'none';
-  trialStartDate: number;       // timestamp ms
+  plan: 'trial' | 'monthly' | 'yearly' | 'none';
+  trialStartDate: number;
   subscribedDate: number | null;
-  expiresAt: number | null;     // null = active until cancelled
+  expiresAt: number | null;
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+  currentPeriodEnd?: number;
+  stripeStatus?: 'active' | 'trialing' | 'past_due' | 'canceled' | 'incomplete' | 'unpaid';
+  cancelAtPeriodEnd?: boolean;
 }
 
 export interface UserProfile {
@@ -342,7 +347,11 @@ export const getTrialDaysLeft = (sub: SubscriptionStatus): number => {
 
 export const isSubscriptionActive = (sub: SubscriptionStatus): boolean => {
   if (sub.plan === 'trial') return getTrialDaysLeft(sub) > 0;
-  if (sub.plan === 'monthly') return true;  // mock – always active once subscribed
+  if (sub.plan === 'monthly' || sub.plan === 'yearly') {
+    if (sub.stripeStatus && sub.stripeStatus !== 'active') return false;
+    if (sub.currentPeriodEnd) return Date.now() < sub.currentPeriodEnd;
+    return true;
+  }
   return false;
 };
 
