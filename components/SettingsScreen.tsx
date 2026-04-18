@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserProfile, SourceLang, SUBSCRIPTION_PRICE_NOK, TRIAL_DAYS, getTrialDaysLeft, isSubscriptionActive } from '../types';
+import { UserProfile, SourceLang, TRIAL_FREE_TASKS, getTrialTasksLeft, isSubscriptionActive } from '../types';
 import { setStoredApiKey, clearStoredApiKey, validateApiKey, detectProvider } from '../services/geminiService';
 
 interface Props {
@@ -69,8 +69,28 @@ const SettingsScreen: React.FC<Props> = ({ user, onLogout, onApiKeySave, onSubsc
     ? ({ gemini: 'Gemini', claude: 'Claude', openai: 'OpenAI' } as const)[detectProvider(currentKey)]
     : null;
 
+  const [portalLoading, setPortalLoading] = useState(false);
+
   const subActive = isSubscriptionActive(user.subscription);
-  const trialLeft = user.subscription.plan === 'trial' ? getTrialDaysLeft(user.subscription) : null;
+  const tasksLeft = user.subscription.plan === 'trial' ? getTrialTasksLeft(user) : null;
+  const isPaid = user.subscription.plan === 'monthly' || user.subscription.plan === 'yearly';
+
+  const handleManageSubscription = async () => {
+    const customerId = user.subscription.stripeCustomerId;
+    if (!customerId) return;
+    setPortalLoading(true);
+    try {
+      const res = await fetch('/api/create-portal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerId, returnUrl: window.location.origin }),
+      });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+    } finally {
+      setPortalLoading(false);
+    }
+  };
 
   const handleSaveApiKey = async () => {
     const key = apiKeyInput.trim();
@@ -129,23 +149,23 @@ const SettingsScreen: React.FC<Props> = ({ user, onLogout, onApiKeySave, onSubsc
           <div className="flex items-center justify-between mb-3">
             <div>
               <p className="font-bold text-sm">
-                {user.subscription.plan === 'monthly'
-                  ? '✅ Aktiv abonnent'
+                {isPaid
+                  ? (user.subscription.plan === 'yearly' ? '✅ Premium Årlig' : '✅ Premium Månedlig')
                   : user.subscription.plan === 'trial'
-                  ? `🎁 Gratis prøveperiode`
+                  ? '🎁 Gratis prøveperiode'
                   : '❌ Ingen abonnement'}
               </p>
               <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                {user.subscription.plan === 'monthly'
-                  ? `${SUBSCRIPTION_PRICE_NOK} kr/mnd • Full tilgang`
+                {isPaid
+                  ? (user.subscription.plan === 'yearly' ? '€71.91/år • €5.99/mnd • Full tilgang' : '€7.99/mnd • Full tilgang')
                   : user.subscription.plan === 'trial'
-                  ? trialLeft !== null
-                    ? `${trialLeft} dag${trialLeft !== 1 ? 'er' : ''} igjen av prøveperioden`
+                  ? tasksLeft !== null
+                    ? `${tasksLeft} av ${TRIAL_FREE_TASKS} gratis oppgaver igjen`
                     : 'Prøveperiode aktiv'
                   : 'Ingen aktiv plan'}
               </p>
             </div>
-            {user.subscription.plan !== 'monthly' && (
+            {!isPaid && (
               <button
                 onClick={onSubscribe}
                 className="btn-primary px-4 py-2 text-sm"
@@ -155,19 +175,33 @@ const SettingsScreen: React.FC<Props> = ({ user, onLogout, onApiKeySave, onSubsc
             )}
           </div>
 
-          {user.subscription.plan !== 'monthly' && (
+          {isPaid && user.subscription.stripeCustomerId ? (
+            <button
+              onClick={handleManageSubscription}
+              disabled={portalLoading}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all"
+              style={{
+                background: 'rgba(249,115,22,0.07)',
+                border: '1px solid rgba(249,115,22,0.2)',
+                color: 'var(--primary)',
+                opacity: portalLoading ? 0.7 : 1,
+              }}
+            >
+              {portalLoading ? 'Laster...' : '⚙️ Administrer abonnement'}
+            </button>
+          ) : !isPaid ? (
             <div
               className="p-3 rounded-xl"
               style={{ background: 'rgba(249,115,22,0.07)', border: '1px solid rgba(249,115,22,0.15)' }}
             >
               <p className="text-xs font-semibold" style={{ color: 'var(--primary)' }}>
-                Full tilgang for {SUBSCRIPTION_PRICE_NOK} kr/mnd
+                Fra €7.99/mnd eller €71.91/år (spar 25%)
               </p>
               <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                Alle leksjoner, samtaler, AI-funksjoner · Ingen binding
+                Alle leksjoner, samtaler, AI-funksjoner · Avslutt når som helst
               </p>
             </div>
-          )}
+          ) : null}
         </div>
       </Section>
 

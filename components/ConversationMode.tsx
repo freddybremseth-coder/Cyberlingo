@@ -18,16 +18,12 @@ interface Props {
 const ScenarioCard: React.FC<{
   scenario: ConversationScenario;
   onClick: () => void;
-}> = ({ scenario, onClick }) => {
+  diffLabels: Record<string, string>;
+}> = ({ scenario, onClick, diffLabels }) => {
   const diffColors: Record<string, string> = {
     beginner:     'var(--success)',
     intermediate: 'var(--warning)',
     advanced:     'var(--danger)',
-  };
-  const diffLabels: Record<string, string> = {
-    beginner:     'Nybegynner',
-    intermediate: 'Mellomnivå',
-    advanced:     'Avansert',
   };
   return (
     <button
@@ -107,7 +103,8 @@ const ActiveConversation: React.FC<{
   lang: SourceLang;
   onBack: () => void;
   onComplete: () => void;
-}> = ({ scenario, lang, onBack, onComplete }) => {
+  convLabels: Record<string, string>;
+}> = ({ scenario, lang, onBack, onComplete, convLabels }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -187,7 +184,7 @@ const ActiveConversation: React.FC<{
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          Tilbake
+          {convLabels.back}
         </button>
         <div
           className="flex items-center gap-2 flex-1 px-3 py-2 rounded-2xl"
@@ -197,7 +194,7 @@ const ActiveConversation: React.FC<{
           <div>
             <p className="font-bold text-sm">{scenario.titleNo}</p>
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              Svar på spansk · AI gir tilbakemelding
+              {convLabels.answerIn}
             </p>
           </div>
         </div>
@@ -207,7 +204,7 @@ const ActiveConversation: React.FC<{
       {messages.length <= 1 && (
         <div className="mb-4">
           <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-muted)' }}>
-            Prøv disse frasene:
+            {convLabels.tryPhrases}
           </p>
           <div className="flex flex-wrap gap-2">
             {scenario.starterPhrases.slice(1).map((phrase, i) => (
@@ -254,14 +251,14 @@ const ActiveConversation: React.FC<{
         >
           <span className="text-xl">🎉</span>
           <div className="flex-1">
-            <p className="font-bold text-sm" style={{ color: 'var(--success)' }}>Samtale fullført!</p>
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>+20 XP opptjent</p>
+            <p className="font-bold text-sm" style={{ color: 'var(--success)' }}>{convLabels.completed}</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{convLabels.xpEarned}</p>
           </div>
           <button
             onClick={onComplete}
             className="badge badge-success text-xs cursor-pointer"
           >
-            Neste scenario →
+            {convLabels.nextScenario}
           </button>
         </div>
       )}
@@ -277,7 +274,7 @@ const ActiveConversation: React.FC<{
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={handleKey}
-          placeholder="Skriv på spansk..."
+          placeholder={convLabels.writeIn}
           className="flex-1 bg-transparent text-sm outline-none"
           style={{ color: 'var(--text)' }}
           disabled={loading}
@@ -302,6 +299,48 @@ const ActiveConversation: React.FC<{
 
 // ─── Main ConversationMode ──────────────────────────────────────────────────
 const ConversationMode: React.FC<Props> = ({ lang, onComplete }) => {
+  const labels = ({
+    no: {
+      title: 'Samtaleøvelse', sub: 'Den raskeste måten å lære spansk på. Velg et scenario og snakk med en AI-partner.',
+      whyTitle: '🎓 Hvorfor samtaleøvelse er nøkkelen',
+      whyBody: 'Forskning viser at aktiv bruk av et språk er langt mer effektivt enn passiv pugge. AI-partneren din korrigerer feil og gir tips underveis. Start med begynnerscenarier og jobb deg oppover!',
+      chooseScenario: 'VELG SCENARIO',
+      diffLabels: { beginner: 'Nybegynner', intermediate: 'Mellomnivå', advanced: 'Avansert' },
+      back: 'Tilbake', answerIn: 'Svar på spansk · AI gir tilbakemelding',
+      tryPhrases: 'Prøv disse frasene:', writeIn: 'Skriv på spansk...',
+      completed: 'Samtale fullført!', xpEarned: '+20 XP opptjent', nextScenario: 'Neste scenario →',
+    },
+    en: {
+      title: 'Conversation practice', sub: 'The fastest way to learn Spanish. Choose a scenario and talk with an AI partner.',
+      whyTitle: '🎓 Why conversation practice is the key',
+      whyBody: 'Research shows that actively using a language is far more effective than passive memorisation. Your AI partner corrects mistakes and gives tips along the way. Start with beginner scenarios and work your way up!',
+      chooseScenario: 'CHOOSE SCENARIO',
+      diffLabels: { beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced' },
+      back: 'Back', answerIn: 'Reply in Spanish · AI gives feedback',
+      tryPhrases: 'Try these phrases:', writeIn: 'Write in Spanish...',
+      completed: 'Conversation completed!', xpEarned: '+20 XP earned', nextScenario: 'Next scenario →',
+    },
+    de: {
+      title: 'Gesprächsübung', sub: 'Der schnellste Weg, Spanisch zu lernen. Wähle ein Szenario und sprich mit einem KI-Partner.',
+      whyTitle: '🎓 Warum Gesprächsübung der Schlüssel ist',
+      whyBody: 'Forschungen zeigen, dass aktive Sprachnutzung weitaus effektiver ist als passives Lernen. Dein KI-Partner korrigiert Fehler und gibt unterwegs Tipps. Fang mit Anfängerszenarien an!',
+      chooseScenario: 'SZENARIO WÄHLEN',
+      diffLabels: { beginner: 'Anfänger', intermediate: 'Mittelstufe', advanced: 'Fortgeschritten' },
+      back: 'Zurück', answerIn: 'Auf Spanisch antworten · KI gibt Feedback',
+      tryPhrases: 'Probiere diese Phrasen:', writeIn: 'Auf Spanisch schreiben...',
+      completed: 'Gespräch abgeschlossen!', xpEarned: '+20 XP verdient', nextScenario: 'Nächstes Szenario →',
+    },
+    ru: {
+      title: 'Разговорная практика', sub: 'Самый быстрый способ выучить испанский. Выбери сценарий и говори с AI-партнёром.',
+      whyTitle: '🎓 Почему разговорная практика — ключ к успеху',
+      whyBody: 'Исследования показывают, что активное использование языка намного эффективнее пассивного заучивания. Твой AI-партнёр исправляет ошибки и даёт советы. Начни с базовых сценариев!',
+      chooseScenario: 'ВЫБРАТЬ СЦЕНАРИЙ',
+      diffLabels: { beginner: 'Начинающий', intermediate: 'Средний', advanced: 'Продвинутый' },
+      back: 'Назад', answerIn: 'Отвечай по-испански · AI даёт обратную связь',
+      tryPhrases: 'Попробуй эти фразы:', writeIn: 'Пиши по-испански...',
+      completed: 'Разговор завершён!', xpEarned: '+20 XP заработано', nextScenario: 'Следующий сценарий →',
+    },
+  } as Record<string, any>)[lang] ?? {} as any;
   const [selected, setSelected] = useState<ConversationScenario | null>(null);
 
   const handleComplete = () => {
@@ -317,6 +356,7 @@ const ConversationMode: React.FC<Props> = ({ lang, onComplete }) => {
           lang={lang}
           onBack={() => setSelected(null)}
           onComplete={handleComplete}
+          convLabels={labels}
         />
       </div>
     );
@@ -326,9 +366,9 @@ const ConversationMode: React.FC<Props> = ({ lang, onComplete }) => {
     <div className="space-y-5 animate-fadeIn">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-black mb-1">Samtaleøvelse</h2>
+        <h2 className="text-2xl font-black mb-1">{labels.title}</h2>
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          Den raskeste måten å lære spansk på. Velg et scenario og snakk med en AI-partner.
+          {labels.sub}
         </p>
       </div>
 
@@ -338,19 +378,17 @@ const ConversationMode: React.FC<Props> = ({ lang, onComplete }) => {
         style={{ background: 'rgba(56,189,248,0.07)', border: '1px solid rgba(56,189,248,0.15)' }}
       >
         <p className="font-bold text-sm mb-1" style={{ color: 'var(--secondary)' }}>
-          🎓 Hvorfor samtaleøvelse er nøkkelen
+          {labels.whyTitle}
         </p>
         <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-          Forskning viser at aktiv bruk av et språk er langt mer effektivt enn passiv pugge.
-          AI-partneren din korrigerer feil og gir tips underveis. Start med begynnerscenarier
-          og jobb deg oppover!
+          {labels.whyBody}
         </p>
       </div>
 
       {/* Difficulty filter */}
       <div>
         <h3 className="font-bold text-sm mb-3" style={{ color: 'var(--text-muted)' }}>
-          VELG SCENARIO
+          {labels.chooseScenario}
         </h3>
         <div className="space-y-3">
           {CONVERSATION_SCENARIOS.map(scenario => (
@@ -358,6 +396,7 @@ const ConversationMode: React.FC<Props> = ({ lang, onComplete }) => {
               key={scenario.id}
               scenario={scenario}
               onClick={() => setSelected(scenario)}
+              diffLabels={labels.diffLabels ?? { beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced' }}
             />
           ))}
         </div>

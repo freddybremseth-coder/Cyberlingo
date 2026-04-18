@@ -185,29 +185,26 @@ export const validateApiKey = async (key: string): Promise<boolean> => {
     const provider = detectProvider(key);
 
     if (provider === 'gemini') {
-      const ai = new GoogleGenAI({ apiKey: key });
-      await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: 'Di "hola"',
-        config: { maxOutputTokens: 5 },
-      });
-      return true;
+      // Use models list endpoint — no token cost, just validates the key
+      const resp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`
+      );
+      return resp.ok;
     }
 
     if (provider === 'claude') {
       const resp = await claudePost(key, {
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 5,
-        messages: [{ role: 'user', content: 'Di "hola"' }],
+        messages: [{ role: 'user', content: 'Hola' }],
       });
-      return resp.ok;
+      if (resp.status === 401 || resp.status === 403) return false;
+      return true;
     }
 
-    // OpenAI
-    const resp = await openaiPost(key, {
-      model: 'gpt-4o-mini',
-      max_tokens: 5,
-      messages: [{ role: 'user', content: 'Di "hola"' }],
+    // OpenAI — models list is free to call
+    const resp = await fetch('https://api.openai.com/v1/models', {
+      headers: { Authorization: `Bearer ${key}` },
     });
     return resp.ok;
   } catch {

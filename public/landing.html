@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>¡Hola! – Lær spansk raskt med AI | Norges beste språkapp</title>
+<meta name="description" content="Lær spansk på rekordtid med AI-drevne samtaler, smart repetisjon og personlig tilbakemelding. Start med 4 gratis oppgaver. Fra €7.99/mnd." />
+<meta name="keywords" content="lær spansk, spansk app, språkapp, AI spansk, spansk kurs, spansk online" />
+<meta property="og:title" content="¡Hola! – Lær spansk raskt med AI" />
+<meta property="og:description" content="Norges smarteste spanskapp. Øv med AI, lær på 10 minutter om dagen." />
+<meta property="og:type" content="website" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0f1c;
+  --bg-surface: #111827;
+  --bg-card: #1a2337;
+  --primary: #f97316;
+  --primary-dark: #ea580c;
+  --primary-glow: rgba(249,115,22,0.35);
+  --secondary: #38bdf8;
+  --text: #f1f5f9;
+  --text-muted: #94a3b8;
+  --text-faint: #64748b;
+  --border: rgba(148,163,184,0.15);
+  --success: #10b981;
+  --warning: #fbbf24;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+.container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+.gradient-text {
+  background: linear-gradient(135deg, #f97316, #fb923c, #38bdf8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 28px;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 16px;
+  text-decoration: none;
+  transition: all 0.2s;
+  cursor: pointer;
+  border: none;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  box-shadow: 0 8px 24px var(--primary-glow);
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 32px var(--primary-glow); }
+.btn-ghost { background: transparent; color: var(--text); border: 1.5px solid var(--border); }
+.btn-ghost:hover { background: var(--bg-card); }
+.btn-lg { padding: 18px 36px; font-size: 18px; }
+/* Navigation */
+nav.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10,15,28,0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 0;
+}
+.nav-inner { display: flex; justify-content: space-between; align-items: center; }
+.logo { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 22px; }
+.logo-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 20px;
+}
+.nav-links { display: flex; gap: 32px; align-items: center; }
+.nav-links a { color: var(--text-muted); text-decoration: none; font-weight: 500; transition: color 0.2s; font-size: 15px; }
+.nav-links a:hover { color: var(--text); }
+@media (max-width: 768px) { .nav-links a:not(.btn) { display: none; } }
+
+/* Hero */
+.hero {
+  position: relative;
+  padding: 100px 0 80px;
+  text-align: center;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -200px; left: 50%;
+  transform: translateX(-50%);
+  width: 800px; height: 800px;
+  background: radial-gradient(circle, var(--primary-glow) 0%, transparent 60%);
+  pointer-events: none;
+}
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 100px;
+  background: rgba(249,115,22,0.12);
+  border: 1px solid rgba(249,115,22,0.25);
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 24px;
+  position: relative;
+}
+h1 {
+  font-size: clamp(42px, 7vw, 72px);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin-bottom: 24px;
+  position: relative;
+}
+.hero p.subtitle {
+  font-size: clamp(18px, 2.2vw, 22px);
+  color: var(--text-muted);
+  max-width: 680px;
+  margin: 0 auto 40px;
+  position: relative;
+}
+.hero-cta { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; position: relative; }
+.hero-trust {
+  margin-top: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  flex-wrap: wrap;
+  font-size: 14px;
+  color: var(--text-muted);
+  position: relative;
+}
+.hero-trust .check { color: var(--success); font-weight: 700; }
+
+/* Section base */
+section { padding: 80px 0; position: relative; }
+.section-title {
+  text-align: center;
+  margin-bottom: 60px;
+}
+.section-title h2 {
+  font-size: clamp(32px, 5vw, 48px);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  margin-bottom: 16px;
+}
+.section-title p {
+  font-size: 18px;
+  color: var(--text-muted);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Features */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+}
+.feature-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px 28px;
+  transition: all 0.3s;
+}
+.feature-card:hover { transform: translateY(-4px); border-color: rgba(249,115,22,0.3); }
+.feature-icon {
+  width: 56px; height: 56px;
+  border-radius: 14px;
+  background: rgba(249,115,22,0.12);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+  margin-bottom: 20px;
+}
+.feature-card h3 { font-size: 20px; font-weight: 800; margin-bottom: 10px; }
+.feature-card p { color: var(--text-muted); font-size: 15px; }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="container nav-inner">
+    <div class="logo">
+      <div class="logo-icon">¡</div>
+      <span>Hola!</span>
+    </div>
+    <div class="nav-links">
+      <a href="#features">Funksjoner</a>
+      <a href="#how">Slik fungerer det</a>
+      <a href="#pricing">Priser</a>
+      <a href="#faq">FAQ</a>
+      <a href="/" class="btn btn-primary" style="padding:10px 20px;font-size:14px;">Start gratis →</a>
+    </div>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="container">
+    <div class="hero-badge">
+      <span>🇪🇸</span> Laget spesielt for skandinaviske språklærere
+    </div>
+    <h1>Lær <span class="gradient-text">spansk</span> raskere<br/>med AI-drevne samtaler</h1>
+    <p class="subtitle">
+      Snakk spansk flytende på kun 10 minutter om dagen.<br/>
+      Personlig AI-lærer, smart repetisjon og ekte samtaler.
+    </p>
+    <div class="hero-cta">
+      <a href="/" class="btn btn-primary btn-lg">Start gratis →</a>
+      <a href="#how" class="btn btn-ghost btn-lg">Se hvordan det fungerer</a>
+    </div>
+    <div class="hero-trust">
+      <span><span class="check">✓</span> 4 gratis oppgaver</span>
+      <span><span class="check">✓</span> Ingen kortinfo kreves</span>
+      <span><span class="check">✓</span> Avslutt når som helst</span>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section id="features" style="background:linear-gradient(180deg,transparent,rgba(17,24,39,0.5));">
+  <div class="container">
+    <div class="section-title">
+      <h2>Alt du trenger for å <span class="gradient-text">mestre spansk</span></h2>
+      <p>En komplett læringsplattform bygget med den nyeste AI-teknologien</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">💬</div>
+        <h3>Ekte AI-samtaler</h3>
+        <p>Øv med en personlig AI-lærer i virkelige scenarier — kafé, hotell, jobbsamtale og mer. Få umiddelbar tilbakemelding på spansken din.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎙️</div>
+        <h3>Luna Live – stemmeprat</h3>
+        <p>Snakk direkte med AI-en på spansk med naturlig stemme. Som å ha en privat språklærer i lomma – 24/7.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📚</div>
+        <h3>Strukturerte leksjoner</h3>
+        <p>Fra A1 til B2: grammatikk, ordforråd, verb og fraser – alt forklart på norsk, engelsk, tysk eller russisk.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📷</div>
+        <h3>Kamera-læring</h3>
+        <p>Pek kameraet mot hva som helst og lær det spanske ordet umiddelbart. Turistfavoritt – og et kraftig læringsverktøy.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🧠</div>
+        <h3>Smart repetisjon</h3>
+        <p>Vitenskapelig repetisjonssystem som husker nøyaktig hva du strever med – og øver akkurat det du trenger.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔥</div>
+        <h3>Daglig streak & XP</h3>
+        <p>Gamifisert læring som holder deg motivert. Lås opp prestasjoner, stig i nivå og konkurrer med deg selv.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎯</div>
+        <h3>Personlig tilpasning</h3>
+        <p>AI-en tilpasser vanskegraden, temaene og farten etter hvordan du lærer. Ingen én-størrelse-passer-alle.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🌍</div>
+        <h3>4 morsmål støttet</h3>
+        <p>Norsk, engelsk, tysk og russisk. Alle forklaringer, oversettelser og tips er på ditt morsmål.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How it works -->
+<section id="how">
+  <div class="container">
+    <div class="section-title">
+      <h2>Kom i gang på <span class="gradient-text">60 sekunder</span></h2>
+      <p>Tre enkle steg til din første spanskleksjon</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;">
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:32px;text-align:center;position:relative;">
+        <div style="position:absolute;top:-16px;left:50%;transform:translateX(-50%);width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-dark));display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;color:white;box-shadow:0 4px 12px var(--primary-glow);">1</div>
+        <div style="font-size:48px;margin:24px 0 16px;">✍️</div>
+        <h3 style="font-size:20px;font-weight:800;margin-bottom:12px;">Opprett konto</h3>
+        <p style="color:var(--text-muted);font-size:15px;">Skriv inn e-post og brukernavn. Velg morsmål. Ferdig.</p>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:32px;text-align:center;position:relative;">
+        <div style="position:absolute;top:-16px;left:50%;transform:translateX(-50%);width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-dark));display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;color:white;box-shadow:0 4px 12px var(--primary-glow);">2</div>
+        <div style="font-size:48px;margin:24px 0 16px;">🤖</div>
+        <h3 style="font-size:20px;font-weight:800;margin-bottom:12px;">Legg inn API-nøkkel</h3>
+        <p style="color:var(--text-muted);font-size:15px;">Bruk din egen gratis Gemini-nøkkel. Vi lagrer den kun lokalt på enheten din.</p>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:32px;text-align:center;position:relative;">
+        <div style="position:absolute;top:-16px;left:50%;transform:translateX(-50%);width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-dark));display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;color:white;box-shadow:0 4px 12px var(--primary-glow);">3</div>
+        <div style="font-size:48px;margin:24px 0 16px;">🚀</div>
+        <h3 style="font-size:20px;font-weight:800;margin-bottom:12px;">Start læringen</h3>
+        <p style="color:var(--text-muted);font-size:15px;">Prøv 4 oppgaver gratis. Oppgrader til premium for ubegrenset tilgang.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Pricing -->
+<section id="pricing" style="background:linear-gradient(180deg,transparent,rgba(17,24,39,0.5));">
+  <div class="container">
+    <div class="section-title">
+      <h2>Enkel og <span class="gradient-text">ærlig pris</span></h2>
+      <p>Start gratis. Oppgrader når du er klar. Avslutt når som helst.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px;max-width:900px;margin:0 auto;">
+      <!-- Monthly -->
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:24px;padding:40px 32px;">
+        <p style="font-size:14px;font-weight:700;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.1em;">Månedlig</p>
+        <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:24px;">
+          <span style="font-size:56px;font-weight:900;">€7.99</span>
+          <span style="color:var(--text-muted);font-size:18px;">/mnd</span>
+        </div>
+        <ul style="list-style:none;margin-bottom:32px;">
+          <li style="padding:10px 0;display:flex;gap:10px;align-items:center;"><span style="color:var(--success);font-weight:900;">✓</span> Full tilgang til alle funksjoner</li>
+          <li style="padding:10px 0;display:flex;gap:10px;align-items:center;"><span style="color:var(--success);font-weight:900;">✓</span> Ubegrenset AI-samtaler</li>
+          <li style="padding:10px 0;display:flex;gap:10px;align-items:center;"><span style="color:var(--success);font-weight:900;">✓</span> Alle leksjoner (A1–B2)</li>
+          <li style="padding:10px 0;display:flex;gap:10px;align-items:center;"><span style="color:var(--success);font-weight:900;">✓</span> Luna Live stemmeprat</li>
+          <li style="padding:10px 0;display:flex;gap:10px;align-items:center;"><span style="color:var(--success);font-weight:900;">✓</span> Avslutt når som helst</li>
+        </ul>
+        <a href="/" class="btn btn-ghost" style="width:100%;justify-content:center;">Velg månedlig</a>
+      </div>
+      <!-- Yearly -->
+      <div style="background:linear-gradient(135deg,rgba(249,115,22,0.12),rgba(56,189,248,0.08));border:2px solid rgba(249,115,22,0.5);border-radius:24px;padding:40px 32px;position:relative;">
+        <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--primary),var(--primary-dark));padding:6px 20px;border-radius:100px;font-size:13px;font-weight:800;color:white;letter-spacing:0.05em;">🔥 MEST POPULÆR · SPAR 25%</div>
+        <p style="font-size:14px;font-weight:700;color:var(--primary);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.1em;">Årlig</p>
+        <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px;">
+          <span style="font-size:56px;font-weight:900;" class="gradient-text">€5.99</span>
+          <span style="color:var(--text-muted);font-size:18px;">/mnd</span>
+        </div>
+        <p style="color:var(--text-muted);font-size:14px;margin-bottom:24px;">€71.91 fakturert årlig • <s>€95.88</s></p>
+        <ul style="list-style:none;margin-bottom:32px;">
+          <li style="padding:10px 0;display:flex;gap:10px;align-items:center;"><span style="color:var(--success);font-weight:900;">✓</span> <strong>Alt i månedlig plan</strong></li>
+          <li style="padding:10px 0;display:flex;gap:10px;align-items:center;"><span style="color:var(--success);font-weight:900;">✓</span> Spar €23.97 per år</li>
+          <li style="padding:10px 0;display:flex;gap:10px;align-items:center;"><span style="color:var(--success);font-weight:900;">✓</span> Prioritert kundestøtte</li>
+          <li style="padding:10px 0;display:flex;gap:10px;align-items:center;"><span style="color:var(--success);font-weight:900;">✓</span> Tidlig tilgang til nye funksjoner</li>
+          <li style="padding:10px 0;display:flex;gap:10px;align-items:center;"><span style="color:var(--success);font-weight:900;">✓</span> 30 dagers pengene-tilbake-garanti</li>
+        </ul>
+        <a href="/" class="btn btn-primary" style="width:100%;justify-content:center;">Start med årlig →</a>
+      </div>
+    </div>
+    <p style="text-align:center;margin-top:40px;color:var(--text-muted);font-size:14px;">
+      🔒 Sikker betaling via Stripe · 💳 Visa, Mastercard, Apple Pay · 📧 Umiddelbar tilgang
+    </p>
+  </div>
+</section>
+
+<!-- Testimonials -->
+<section>
+  <div class="container">
+    <div class="section-title">
+      <h2>Brukerne våre <span class="gradient-text">elsker det</span></h2>
+      <p>Bli med tusenvis av nordmenn som mestrer spansk</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;">
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:32px;">
+        <div style="color:var(--warning);font-size:18px;margin-bottom:16px;">★★★★★</div>
+        <p style="font-size:16px;line-height:1.7;margin-bottom:24px;">"Har prøvd Duolingo, Babbel og Rosetta Stone – dette er helt i en annen liga. AI-samtalene er som å snakke med en ekte lærer."</p>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-dark));display:flex;align-items:center;justify-content:center;font-weight:900;color:white;font-size:18px;">M</div>
+          <div>
+            <p style="font-weight:700;">Maria L.</p>
+            <p style="font-size:13px;color:var(--text-muted);">Oslo · 6 uker bruker</p>
+          </div>
+        </div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:32px;">
+        <div style="color:var(--warning);font-size:18px;margin-bottom:16px;">★★★★★</div>
+        <p style="font-size:16px;line-height:1.7;margin-bottom:24px;">"Luna Live har revolusjonert hvordan jeg lærer. 15 minutter om dagen og jeg er allerede mye mer komfortabel med å snakke spansk."</p>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--secondary),#0284c7);display:flex;align-items:center;justify-content:center;font-weight:900;color:white;font-size:18px;">E</div>
+          <div>
+            <p style="font-weight:700;">Erik S.</p>
+            <p style="font-size:13px;color:var(--text-muted);">Bergen · 3 måneder bruker</p>
+          </div>
+        </div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:32px;">
+        <div style="color:var(--warning);font-size:18px;margin-bottom:16px;">★★★★★</div>
+        <p style="font-size:16px;line-height:1.7;margin-bottom:24px;">"Kamerafunksjonen er genial på reise. Pek på hva som helst og lær ordet. Har lært over 300 nye ord på 2 måneder!"</p>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--warning),#f59e0b);display:flex;align-items:center;justify-content:center;font-weight:900;color:white;font-size:18px;">A</div>
+          <div>
+            <p style="font-weight:700;">Anna K.</p>
+            <p style="font-size:13px;color:var(--text-muted);">Trondheim · 2 måneder bruker</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" style="background:linear-gradient(180deg,transparent,rgba(17,24,39,0.5));">
+  <div class="container" style="max-width:800px;">
+    <div class="section-title">
+      <h2>Ofte stilte <span class="gradient-text">spørsmål</span></h2>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <details style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:20px 24px;cursor:pointer;">
+        <summary style="font-weight:700;font-size:17px;list-style:none;display:flex;justify-content:space-between;align-items:center;">Hvor raskt kan jeg lære spansk med ¡Hola!? <span style="color:var(--primary);">+</span></summary>
+        <p style="margin-top:16px;color:var(--text-muted);line-height:1.7;">Brukere som øver 10–15 minutter om dagen rapporterer om tydelig fremgang etter 2–3 uker. Etter 3 måneder er de fleste komfortable med grunnleggende samtaler. Farten avhenger av hvor ofte du øver.</p>
+      </details>
+      <details style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:20px 24px;cursor:pointer;">
+        <summary style="font-weight:700;font-size:17px;list-style:none;display:flex;justify-content:space-between;align-items:center;">Hva er forskjellen på gratis og premium? <span style="color:var(--primary);">+</span></summary>
+        <p style="margin-top:16px;color:var(--text-muted);line-height:1.7;">Gratis-versjonen gir deg 4 oppgaver så du kan prøve kvaliteten. Premium låser opp ubegrenset bruk av alle funksjoner: samtaler, leksjoner, Luna Live, kamera-læring og smart repetisjon.</p>
+      </details>
+      <details style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:20px 24px;cursor:pointer;">
+        <summary style="font-weight:700;font-size:17px;list-style:none;display:flex;justify-content:space-between;align-items:center;">Kan jeg avslutte abonnementet når som helst? <span style="color:var(--primary);">+</span></summary>
+        <p style="margin-top:16px;color:var(--text-muted);line-height:1.7;">Ja. Du kan avslutte abonnementet når som helst direkte i appen med ett klikk. Du beholder tilgangen ut perioden du har betalt for. Ingen bindingstid.</p>
+      </details>
+      <details style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:20px 24px;cursor:pointer;">
+        <summary style="font-weight:700;font-size:17px;list-style:none;display:flex;justify-content:space-between;align-items:center;">Må jeg ha en AI API-nøkkel? <span style="color:var(--primary);">+</span></summary>
+        <p style="margin-top:16px;color:var(--text-muted);line-height:1.7;">Ja. Du bruker din egen gratis Google Gemini-nøkkel (eller OpenAI/Claude). Dette gjør at vi kan tilby kraftig AI-læring til en brøkdel av prisen konkurrentene tar. Vi lagrer nøkkelen kun lokalt på enheten din.</p>
+      </details>
+      <details style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:20px 24px;cursor:pointer;">
+        <summary style="font-weight:700;font-size:17px;list-style:none;display:flex;justify-content:space-between;align-items:center;">Fungerer appen på mobil? <span style="color:var(--primary);">+</span></summary>
+        <p style="margin-top:16px;color:var(--text-muted);line-height:1.7;">Ja. ¡Hola! er bygget mobil-først. Den fungerer perfekt i nettleseren på mobil, nettbrett og datamaskin. Du kan også legge den til på hjemskjermen som en app.</p>
+      </details>
+      <details style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:20px 24px;cursor:pointer;">
+        <summary style="font-weight:700;font-size:17px;list-style:none;display:flex;justify-content:space-between;align-items:center;">Er betalingen sikker? <span style="color:var(--primary);">+</span></summary>
+        <p style="margin-top:16px;color:var(--text-muted);line-height:1.7;">Absolutt. Vi bruker Stripe – verdens mest brukte betalingsplattform, brukt av Amazon, Shopify, Google og millioner andre. Vi ser aldri kortnummeret ditt.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- Final CTA -->
+<section style="padding:120px 0;">
+  <div class="container" style="text-align:center;max-width:700px;">
+    <h2 style="font-size:clamp(36px,6vw,56px);font-weight:900;line-height:1.1;letter-spacing:-0.02em;margin-bottom:24px;">
+      Klar til å <span class="gradient-text">snakke spansk</span>?
+    </h2>
+    <p style="font-size:20px;color:var(--text-muted);margin-bottom:40px;">
+      Bli med tusenvis som lærer spansk smartere, raskere og morsommere med AI.
+    </p>
+    <a href="/" class="btn btn-primary btn-lg" style="font-size:20px;padding:20px 44px;">Start gratis – 4 oppgaver →</a>
+    <p style="margin-top:20px;color:var(--text-faint);font-size:14px;">Ingen kortinfo kreves · 30 dagers garanti på årlig plan</p>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer style="border-top:1px solid var(--border);padding:40px 0;">
+  <div class="container" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px;">
+    <div class="logo"><div class="logo-icon">¡</div><span>Hola!</span></div>
+    <p style="color:var(--text-faint);font-size:14px;">© 2026 ¡Hola! · Laget med ❤️ i Norge</p>
+    <div style="display:flex;gap:24px;font-size:14px;">
+      <a href="#" style="color:var(--text-muted);text-decoration:none;">Personvern</a>
+      <a href="#" style="color:var(--text-muted);text-decoration:none;">Vilkår</a>
+      <a href="mailto:support@cyberlingo.no" style="color:var(--text-muted);text-decoration:none;">Kontakt</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { SourceLang, UserProfile, TRIAL_DAYS, SUBSCRIPTION_PRICE_NOK } from '../types';
+import { SourceLang, UserProfile, TRIAL_FREE_TASKS, ADMIN_EMAIL } from '../types';
 
 interface Props {
   onLogin: (user: UserProfile) => void;
 }
 
-const createNewUser = (username: string, lang: SourceLang): UserProfile => ({
+const createNewUser = (username: string, email: string, lang: SourceLang): UserProfile => ({
   username,
+  email: email.toLowerCase().trim(),
   sourceLang: lang,
   completedLessonIds: [],
   masteredVocab: [],
@@ -28,11 +29,13 @@ const createNewUser = (username: string, lang: SourceLang): UserProfile => ({
   todayXp: 0,
   lastGoalDate: new Date().toISOString().slice(0, 10),
   conversationsCompleted: 0,
+  freeTasksUsed: 0,
 });
 
 const AuthScreen: React.FC<Props> = ({ onLogin }) => {
   const [step, setStep] = useState<'welcome' | 'login'>('welcome');
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [lang, setLang] = useState<SourceLang>('no');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -40,15 +43,39 @@ const AuthScreen: React.FC<Props> = ({ onLogin }) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const name = username.trim();
+    const emailClean = email.trim().toLowerCase();
     if (!name) { setError('Skriv inn et brukernavn'); return; }
     if (name.length < 2) { setError('Brukernavnet må ha minst 2 tegn'); return; }
+    if (!emailClean || !emailClean.includes('@')) { setError('Skriv inn en gyldig e-postadresse'); return; }
 
     setLoading(true);
     setError('');
 
     setTimeout(() => {
       const users = JSON.parse(localStorage.getItem('cyberlingo_users') || '{}');
-      const user: UserProfile = users[name] ? users[name] : createNewUser(name, lang);
+
+      if (users[name]) {
+        // Existing user logging in
+        const existingUser = users[name];
+        if (!existingUser.email) existingUser.email = emailClean;
+        if (existingUser.freeTasksUsed === undefined) existingUser.freeTasksUsed = 0;
+        onLogin(existingUser);
+        return;
+      }
+
+      // New user — check if email already used a trial (unless admin)
+      if (emailClean !== ADMIN_EMAIL) {
+        const usedEmails: string[] = JSON.parse(localStorage.getItem('cyberlingo_trial_emails') || '[]');
+        if (usedEmails.includes(emailClean)) {
+          setLoading(false);
+          setError('Denne e-postadressen har allerede brukt gratisperioden. Vennligst abonner for å fortsette.');
+          return;
+        }
+        usedEmails.push(emailClean);
+        localStorage.setItem('cyberlingo_trial_emails', JSON.stringify(usedEmails));
+      }
+
+      const user: UserProfile = createNewUser(name, emailClean, lang);
       onLogin(user);
     }, 800);
   };
@@ -129,10 +156,10 @@ const AuthScreen: React.FC<Props> = ({ onLogin }) => {
             style={{ background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.2)' }}
           >
             <p className="text-sm font-semibold" style={{ color: 'var(--primary)' }}>
-              🎁 {TRIAL_DAYS} dager gratis prøveperiode
+              🎁 {TRIAL_FREE_TASKS} gratis oppgaver – ingen kortinfo
             </p>
             <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-              Deretter kun {SUBSCRIPTION_PRICE_NOK} kr/mnd • Ingen binding
+              Deretter kun €7.99/mnd eller €71.91/år • Ingen binding
             </p>
           </div>
 
@@ -194,10 +221,22 @@ const AuthScreen: React.FC<Props> = ({ onLogin }) => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--text-muted)' }}>
-              Brukernavn
+              E-postadresse
             </label>
             <input
               autoFocus
+              type="email"
+              value={email}
+              onChange={e => { setEmail(e.target.value); setError(''); }}
+              placeholder="din@epost.no"
+              className="app-input"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--text-muted)' }}>
+              Brukernavn
+            </label>
+            <input
               type="text"
               value={username}
               onChange={e => { setUsername(e.target.value); setError(''); }}
