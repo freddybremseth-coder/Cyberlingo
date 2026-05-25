@@ -3,6 +3,7 @@ import {
   UserProfile, SourceLang, AppTab, LearnMode, SpeakMode,
   Lesson, ACHIEVEMENTS, isSubscriptionActive, todayString,
   getLevelFromXp, getTrialTasksLeft, ADMIN_EMAIL, TRIAL_FREE_TASKS,
+  LIFETIME_USERNAME, createLifetimeSubscription, isLifetimeEmail,
 } from './types';
 import { INITIAL_LESSONS } from './data/lessons';
 
@@ -229,8 +230,13 @@ const App: React.FC = () => {
     if (!updated.xp) updated.xp = 0;
     if (!updated.conversationsCompleted) updated.conversationsCompleted = 0;
     if (!updated.dailyGoalXp) updated.dailyGoalXp = 50;
-    if (!updated.email) updated.email = '';
+    updated.email = (updated.email || '').trim().toLowerCase();
     if (updated.freeTasksUsed === undefined) updated.freeTasksUsed = 0;
+    if (isLifetimeEmail(updated.email)) {
+      updated.username = LIFETIME_USERNAME;
+      updated.subscription = createLifetimeSubscription(updated.subscription);
+      updated.freeTasksUsed = 0;
+    }
 
     // Reset today's XP if it's a new day
     if (updated.lastGoalDate !== today) {
@@ -388,7 +394,7 @@ const App: React.FC = () => {
   // ─── Subscription active check ─────────────────────────────────────────
   const checkSubscription = useCallback((): boolean => {
     if (!user) return false;
-    if (user.email === ADMIN_EMAIL) return true;
+    if (isLifetimeEmail(user.email) || user.subscription.plan === 'lifetime') return true;
     if (user.subscription.plan === 'trial') return useTrialTask();
     const active = isSubscriptionActive(user.subscription, user.email);
     if (!active) setShowSubModal(true);

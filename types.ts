@@ -5,7 +5,7 @@ export type LearnMode = 'daily' | 'lessons' | 'vocab' | 'verbs' | 'phrases' | 'v
 export type SpeakMode = 'conversation' | 'luna-live' | 'luna-text';
 
 export interface SubscriptionStatus {
-  plan: 'trial' | 'monthly' | 'yearly' | 'none';
+  plan: 'trial' | 'monthly' | 'yearly' | 'lifetime' | 'none';
   trialStartDate: number;
   subscribedDate: number | null;
   expiresAt: number | null;
@@ -343,7 +343,19 @@ export const getXpProgress = (xp: number): { current: number; needed: number; pc
 export const TRIAL_DAYS = 7;
 export const TRIAL_FREE_TASKS = 4;
 export const SUBSCRIPTION_PRICE_NOK = 30;
+export const LIFETIME_USERNAME = 'freddy';
 export const ADMIN_EMAIL = 'freddy.bremseth@gmail.com';
+
+export const isLifetimeEmail = (email?: string): boolean =>
+  (email || '').trim().toLowerCase() === ADMIN_EMAIL;
+
+export const createLifetimeSubscription = (existing?: Partial<SubscriptionStatus>): SubscriptionStatus => ({
+  plan: 'lifetime',
+  trialStartDate: existing?.trialStartDate ?? Date.now(),
+  subscribedDate: existing?.subscribedDate ?? Date.now(),
+  expiresAt: null,
+  stripeStatus: 'active',
+});
 
 export const getTrialDaysLeft = (sub: SubscriptionStatus): number => {
   if (sub.plan !== 'trial') return 0;
@@ -352,13 +364,13 @@ export const getTrialDaysLeft = (sub: SubscriptionStatus): number => {
 };
 
 export const getTrialTasksLeft = (user: UserProfile): number => {
-  if (user.email === ADMIN_EMAIL) return 999;
+  if (isLifetimeEmail(user.email) || user.subscription.plan === 'lifetime') return 999;
   if (user.subscription.plan !== 'trial') return 0;
   return Math.max(0, TRIAL_FREE_TASKS - (user.freeTasksUsed ?? 0));
 };
 
 export const isSubscriptionActive = (sub: SubscriptionStatus, email?: string): boolean => {
-  if (email === ADMIN_EMAIL) return true;
+  if (isLifetimeEmail(email) || sub.plan === 'lifetime') return true;
   if (sub.plan === 'trial') return true; // task limit checked separately
   if (sub.plan === 'monthly' || sub.plan === 'yearly') {
     if (sub.stripeStatus && sub.stripeStatus !== 'active') return false;

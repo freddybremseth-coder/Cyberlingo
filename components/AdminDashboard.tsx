@@ -353,14 +353,14 @@ const AdminDashboard: React.FC<Props> = ({ user, onLogout, onApiKeySave, onLangC
                     className="px-2 py-1 rounded-full text-xs font-bold"
                     style={{
                       background: u.subscription.plan === 'trial' ? 'rgba(251,191,36,0.15)' :
-                        u.subscription.plan === 'monthly' || u.subscription.plan === 'yearly' ? 'rgba(16,185,129,0.15)' :
+                        u.subscription.plan === 'monthly' || u.subscription.plan === 'yearly' || u.subscription.plan === 'lifetime' ? 'rgba(16,185,129,0.15)' :
                           'rgba(148,163,184,0.15)',
                       color: u.subscription.plan === 'trial' ? 'var(--warning)' :
-                        u.subscription.plan === 'monthly' || u.subscription.plan === 'yearly' ? 'var(--success)' :
+                        u.subscription.plan === 'monthly' || u.subscription.plan === 'yearly' || u.subscription.plan === 'lifetime' ? 'var(--success)' :
                           'var(--text-muted)',
                     }}
                   >
-                    {u.subscription.plan}
+                    {u.subscription.plan === 'lifetime' ? 'livstid' : u.subscription.plan}
                   </span>
                 </div>
                 <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{u.email || '(ingen e-post)'}</p>

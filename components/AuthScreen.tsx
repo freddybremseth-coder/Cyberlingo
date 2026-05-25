@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { SourceLang, UserProfile, TRIAL_FREE_TASKS, ADMIN_EMAIL } from '../types';
+import {
+  SourceLang, UserProfile, TRIAL_FREE_TASKS, ADMIN_EMAIL,
+  LIFETIME_USERNAME, createLifetimeSubscription, isLifetimeEmail,
+} from '../types';
 
 interface Props {
   onLogin: (user: UserProfile) => void;
@@ -17,12 +20,14 @@ const createNewUser = (username: string, email: string, lang: SourceLang): UserP
   lastStreakDate: '',
   xp: 0,
   level: 1,
-  subscription: {
-    plan: 'trial',
-    trialStartDate: Date.now(),
-    subscribedDate: null,
-    expiresAt: null,
-  },
+  subscription: isLifetimeEmail(email)
+    ? createLifetimeSubscription()
+    : {
+        plan: 'trial',
+        trialStartDate: Date.now(),
+        subscribedDate: null,
+        expiresAt: null,
+      },
   apiKey: '',
   achievements: [],
   dailyGoalXp: 50,
@@ -57,8 +62,12 @@ const AuthScreen: React.FC<Props> = ({ onLogin }) => {
       if (users[name]) {
         // Existing user logging in
         const existingUser = users[name];
-        if (!existingUser.email) existingUser.email = emailClean;
+        if (!existingUser.email || isLifetimeEmail(emailClean)) existingUser.email = emailClean;
         if (existingUser.freeTasksUsed === undefined) existingUser.freeTasksUsed = 0;
+        if (isLifetimeEmail(existingUser.email)) {
+          existingUser.username = LIFETIME_USERNAME;
+          existingUser.subscription = createLifetimeSubscription(existingUser.subscription);
+        }
         onLogin(existingUser);
         return;
       }

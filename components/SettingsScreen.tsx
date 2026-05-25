@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserProfile, SourceLang, TRIAL_FREE_TASKS, getTrialTasksLeft, isSubscriptionActive } from '../types';
+import { UserProfile, SourceLang, TRIAL_FREE_TASKS, getTrialTasksLeft } from '../types';
 import { setStoredApiKey, clearStoredApiKey, validateApiKey, detectProvider } from '../services/geminiService';
 
 interface Props {
@@ -71,9 +71,10 @@ const SettingsScreen: React.FC<Props> = ({ user, onLogout, onApiKeySave, onSubsc
 
   const [portalLoading, setPortalLoading] = useState(false);
 
-  const subActive = isSubscriptionActive(user.subscription);
   const tasksLeft = user.subscription.plan === 'trial' ? getTrialTasksLeft(user) : null;
-  const isPaid = user.subscription.plan === 'monthly' || user.subscription.plan === 'yearly';
+  const isLifetime = user.subscription.plan === 'lifetime';
+  const isStripePaid = user.subscription.plan === 'monthly' || user.subscription.plan === 'yearly';
+  const hasPremiumAccess = isLifetime || isStripePaid;
 
   const handleManageSubscription = async () => {
     const customerId = user.subscription.stripeCustomerId;
@@ -149,14 +150,18 @@ const SettingsScreen: React.FC<Props> = ({ user, onLogout, onApiKeySave, onSubsc
           <div className="flex items-center justify-between mb-3">
             <div>
               <p className="font-bold text-sm">
-                {isPaid
+                {isLifetime
+                  ? '♾️ Livslangt Premium'
+                  : isStripePaid
                   ? (user.subscription.plan === 'yearly' ? '✅ Premium Årlig' : '✅ Premium Månedlig')
                   : user.subscription.plan === 'trial'
                   ? '🎁 Gratis prøveperiode'
                   : '❌ Ingen abonnement'}
               </p>
               <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                {isPaid
+                {isLifetime
+                  ? 'Full tilgang for alltid • Ingen fornyelse'
+                  : isStripePaid
                   ? (user.subscription.plan === 'yearly' ? '€71.91/år • €5.99/mnd • Full tilgang' : '€7.99/mnd • Full tilgang')
                   : user.subscription.plan === 'trial'
                   ? tasksLeft !== null
@@ -165,7 +170,7 @@ const SettingsScreen: React.FC<Props> = ({ user, onLogout, onApiKeySave, onSubsc
                   : 'Ingen aktiv plan'}
               </p>
             </div>
-            {!isPaid && (
+            {!hasPremiumAccess && (
               <button
                 onClick={onSubscribe}
                 className="btn-primary px-4 py-2 text-sm"
@@ -175,7 +180,7 @@ const SettingsScreen: React.FC<Props> = ({ user, onLogout, onApiKeySave, onSubsc
             )}
           </div>
 
-          {isPaid && user.subscription.stripeCustomerId ? (
+          {isStripePaid && user.subscription.stripeCustomerId ? (
             <button
               onClick={handleManageSubscription}
               disabled={portalLoading}
@@ -189,7 +194,19 @@ const SettingsScreen: React.FC<Props> = ({ user, onLogout, onApiKeySave, onSubsc
             >
               {portalLoading ? 'Laster...' : '⚙️ Administrer abonnement'}
             </button>
-          ) : !isPaid ? (
+          ) : isLifetime ? (
+            <div
+              className="p-3 rounded-xl"
+              style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.18)' }}
+            >
+              <p className="text-xs font-semibold" style={{ color: 'var(--success)' }}>
+                Livslang tilgang er aktiv for denne brukeren.
+              </p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                Brukeren beholder premiumfunksjoner uten Stripe-fornyelse.
+              </p>
+            </div>
+          ) : !hasPremiumAccess ? (
             <div
               className="p-3 rounded-xl"
               style={{ background: 'rgba(249,115,22,0.07)', border: '1px solid rgba(249,115,22,0.15)' }}
