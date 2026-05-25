@@ -3,6 +3,7 @@ import { validateApiKey, detectProvider, AIProvider } from '../services/geminiSe
 
 interface Props {
   onSave: (key: string) => void;
+  onSkip?: () => void;
   username: string;
 }
 
@@ -45,7 +46,7 @@ const PROVIDER_INFO: Record<AIProvider, { label: string; color: string; prefix: 
   },
 };
 
-const ApiKeySetup: React.FC<Props> = ({ onSave, username }) => {
+const ApiKeySetup: React.FC<Props> = ({ onSave, onSkip, username }) => {
   const [key, setKey] = useState('');
   const [status, setStatus] = useState<'idle' | 'validating' | 'error' | 'ok'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
@@ -154,6 +155,15 @@ const ApiKeySetup: React.FC<Props> = ({ onSave, username }) => {
             </span>
           ) : status === 'ok' ? '✓ Klar!' : 'Lagre API-nøkkel'}
         </button>
+
+        {onSkip && (
+          <button
+            onClick={onSkip}
+            className="btn-ghost w-full py-3 mb-6"
+          >
+            Fortsett uten AI-nøkkel
+          </button>
+        )}
 
         {/* Provider instructions */}
         <div

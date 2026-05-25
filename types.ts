@@ -1,7 +1,7 @@
 export type SourceLang = 'no' | 'ru' | 'en' | 'de';
 
 export type AppTab = 'home' | 'learn' | 'speak' | 'progress' | 'profile';
-export type LearnMode = 'lessons' | 'vocab' | 'verbs' | 'phrases' | 'vision';
+export type LearnMode = 'daily' | 'lessons' | 'vocab' | 'verbs' | 'phrases' | 'vision';
 export type SpeakMode = 'conversation' | 'luna-live' | 'luna-text';
 
 export interface SubscriptionStatus {

@@ -7,9 +7,10 @@ import NeonButton from './NeonButton';
 
 interface LunaLiveProps {
   lang: SourceLang;
+  onUseAiTask?: () => boolean;
 }
 
-const LunaLive: React.FC<LunaLiveProps> = ({ lang }) => {
+const LunaLive: React.FC<LunaLiveProps> = ({ lang, onUseAiTask }) => {
   const [isActive, setIsActive] = useState(false);
   const [transcript, setTranscript] = useState<{user: string, bot: string}[]>([]);
   const [currentInput, setCurrentInput] = useState('');
@@ -47,6 +48,7 @@ const LunaLive: React.FC<LunaLiveProps> = ({ lang }) => {
   };
 
   const startConnection = async () => {
+    if (onUseAiTask && !onUseAiTask()) return;
     try {
       setError(null);
       const ai = new GoogleGenAI({ apiKey: getStoredApiKey() });

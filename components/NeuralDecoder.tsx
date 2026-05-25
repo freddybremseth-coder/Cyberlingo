@@ -18,6 +18,7 @@ interface AnalysisResult {
 interface NeuralDecoderProps {
   initialSentence?: string;
   lang?: SourceLang;
+  onUseAiTask?: () => boolean;
 }
 
 const TYPE_COLOR_MAP: Record<string, string> = {
@@ -37,6 +38,7 @@ const getTypeColor = (type: string): string =>
 const NeuralDecoder: React.FC<NeuralDecoderProps> = ({
   initialSentence = 'Hola, ¿cómo estás?',
   lang = 'no',
+  onUseAiTask,
 }) => {
   const [input, setInput] = useState(initialSentence);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -46,6 +48,7 @@ const NeuralDecoder: React.FC<NeuralDecoderProps> = ({
 
   const handleDecode = async () => {
     if (!input.trim() || loading) return;
+    if (onUseAiTask && !onUseAiTask()) return;
     setLoading(true);
     setResult(null);
     setActiveWord(null);

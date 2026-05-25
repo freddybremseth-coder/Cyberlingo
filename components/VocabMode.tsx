@@ -27,7 +27,7 @@ const CATEGORIES = [
   { id: 'School & Study', icon: '📚' },
 ];
 
-const VocabMode: React.FC<{ lang: SourceLang; onMasteredUpdate?: (words: string[]) => void }> = ({ lang, onMasteredUpdate }) => {
+const VocabMode: React.FC<{ lang: SourceLang; onUseAiTask?: () => boolean; onMasteredUpdate?: (words: string[]) => void }> = ({ lang, onUseAiTask, onMasteredUpdate }) => {
   const [words, setWords] = useState<VocabWord[]>([]);
   const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].id);
   const [loading, setLoading] = useState(false);
@@ -45,6 +45,7 @@ const VocabMode: React.FC<{ lang: SourceLang; onMasteredUpdate?: (words: string[
   }, [activeCategory, lang]);
 
   const fetchBatch = async () => {
+    if (onUseAiTask && !onUseAiTask()) return;
     setLoading(true);
     setWords([]);
     setFetchError(null);

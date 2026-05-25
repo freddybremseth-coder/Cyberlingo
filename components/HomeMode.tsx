@@ -84,6 +84,7 @@ const HomeMode: React.FC<Props> = ({ user, lang, onNavigate, onNavigateLearn, on
       goalGreat: 'Strålende innsats! Kom tilbake i morgen 💪',
       statLessons: 'Leksjoner', statWords: 'Ord lært', statConvs: 'Samtaler', statOf: 'av',
       continueTitle: 'Fortsett læringen',
+      cardDaily: 'Dagens treningsøkt', cardDailySub: '8 korte kort med repetisjon og recall', cardDailyBadge: 'Best start',
       cardLessons: 'Grammatikkleksjoner', cardLessonsSub: (done: number, total: number) => `${done} av ${total} fullført`,
       cardConv: 'Samtaleøvelse', cardConvSub: 'Øv på ekte scenarier med AI-partner', cardConvBadge: 'Anbefalt',
       cardVocab: 'Vokabular', cardVocabSub: (n: number) => `${n} ord lært · 15 kategorier`,
@@ -108,6 +109,7 @@ const HomeMode: React.FC<Props> = ({ user, lang, onNavigate, onNavigateLearn, on
       goalGreat: 'Great effort! Come back tomorrow 💪',
       statLessons: 'Lessons', statWords: 'Words learned', statConvs: 'Conversations', statOf: 'of',
       continueTitle: 'Continue learning',
+      cardDaily: 'Daily practice', cardDailySub: '8 short recall and review cards', cardDailyBadge: 'Best start',
       cardLessons: 'Grammar lessons', cardLessonsSub: (done: number, total: number) => `${done} of ${total} completed`,
       cardConv: 'Conversation practice', cardConvSub: 'Practice real scenarios with an AI partner', cardConvBadge: 'Recommended',
       cardVocab: 'Vocabulary', cardVocabSub: (n: number) => `${n} words learned · 15 categories`,
@@ -132,6 +134,7 @@ const HomeMode: React.FC<Props> = ({ user, lang, onNavigate, onNavigateLearn, on
       goalGreat: 'Großartige Leistung! Komm morgen wieder 💪',
       statLessons: 'Lektionen', statWords: 'Wörter gelernt', statConvs: 'Gespräche', statOf: 'von',
       continueTitle: 'Weiterlernen',
+      cardDaily: 'Tagestraining', cardDailySub: '8 kurze Karten mit aktivem Abruf', cardDailyBadge: 'Bester Start',
       cardLessons: 'Grammatiklektionen', cardLessonsSub: (done: number, total: number) => `${done} von ${total} abgeschlossen`,
       cardConv: 'Gesprächsübung', cardConvSub: 'Übe echte Szenarien mit einem KI-Partner', cardConvBadge: 'Empfohlen',
       cardVocab: 'Vokabular', cardVocabSub: (n: number) => `${n} Wörter gelernt · 15 Kategorien`,
@@ -156,6 +159,7 @@ const HomeMode: React.FC<Props> = ({ user, lang, onNavigate, onNavigateLearn, on
       goalGreat: 'Отличная работа! Возвращайтесь завтра 💪',
       statLessons: 'Уроки', statWords: 'Слов изучено', statConvs: 'Разговоры', statOf: 'из',
       continueTitle: 'Продолжить обучение',
+      cardDaily: 'Ежедневная тренировка', cardDailySub: '8 коротких карточек для повторения', cardDailyBadge: 'Лучший старт',
       cardLessons: 'Уроки грамматики', cardLessonsSub: (done: number, total: number) => `${done} из ${total} пройдено`,
       cardConv: 'Разговорная практика', cardConvSub: 'Практикуй реальные сценарии с AI-партнёром', cardConvBadge: 'Рекомендуем',
       cardVocab: 'Словарь', cardVocabSub: (n: number) => `${n} слов изучено · 15 категорий`,
@@ -323,6 +327,14 @@ const HomeMode: React.FC<Props> = ({ user, lang, onNavigate, onNavigateLearn, on
       <div>
         <h2 className="font-bold text-base mb-3">{labels.continueTitle}</h2>
         <div className="space-y-3">
+          <ActionCard
+            icon="🎯"
+            title={labels.cardDaily}
+            subtitle={labels.cardDailySub}
+            color="var(--success)"
+            onClick={() => onNavigateLearn('daily')}
+            badge={labels.cardDailyBadge}
+          />
           <ActionCard
             icon="📖"
             title={labels.cardLessons}

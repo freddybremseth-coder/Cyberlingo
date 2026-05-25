@@ -48,9 +48,10 @@ const TYPE_COLORS: Record<VerbEntry['type'], string> = {
 
 interface VerbModeProps {
   lang?: SourceLang;
+  onUseAiTask?: () => boolean;
 }
 
-const VerbMode: React.FC<VerbModeProps> = ({ lang = 'no' }) => {
+const VerbMode: React.FC<VerbModeProps> = ({ lang = 'no', onUseAiTask }) => {
   const [selectedVerb, setSelectedVerb] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [verbData, setVerbData] = useState<VerbData | null>(null);
@@ -63,6 +64,7 @@ const VerbMode: React.FC<VerbModeProps> = ({ lang = 'no' }) => {
   }, [activeFilter]);
 
   const handleVerbSelect = async (verb: string) => {
+    if (onUseAiTask && !onUseAiTask()) return;
     setSelectedVerb(verb);
     setLoading(true);
     setVerbData(null);
@@ -243,6 +245,7 @@ const VerbMode: React.FC<VerbModeProps> = ({ lang = 'no' }) => {
           <NeuralDecoder
             initialSentence={`Hoy yo ${verbData.conjugations[0]?.yo || 'como'} con mis amigos.`}
             lang={lang as SourceLang}
+            onUseAiTask={onUseAiTask}
           />
         </div>
       )}

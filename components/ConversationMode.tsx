@@ -11,6 +11,7 @@ interface Message {
 
 interface Props {
   lang: SourceLang;
+  onUseAiTask?: () => boolean;
   onComplete: () => void;
 }
 
@@ -101,10 +102,11 @@ const ChatMsg: React.FC<{ msg: Message }> = ({ msg }) => {
 const ActiveConversation: React.FC<{
   scenario: ConversationScenario;
   lang: SourceLang;
+  onUseAiTask?: () => boolean;
   onBack: () => void;
   onComplete: () => void;
   convLabels: Record<string, string>;
-}> = ({ scenario, lang, onBack, onComplete, convLabels }) => {
+}> = ({ scenario, lang, onUseAiTask, onBack, onComplete, convLabels }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -135,6 +137,7 @@ const ActiveConversation: React.FC<{
   const send = async () => {
     const text = input.trim();
     if (!text || loading) return;
+    if (onUseAiTask && !onUseAiTask()) return;
 
     setInput('');
     const userMsg: Message = { role: 'user', text, timestamp: new Date() };
@@ -298,7 +301,7 @@ const ActiveConversation: React.FC<{
 };
 
 // ─── Main ConversationMode ──────────────────────────────────────────────────
-const ConversationMode: React.FC<Props> = ({ lang, onComplete }) => {
+const ConversationMode: React.FC<Props> = ({ lang, onUseAiTask, onComplete }) => {
   const labels = ({
     no: {
       title: 'Samtaleøvelse', sub: 'Den raskeste måten å lære spansk på. Velg et scenario og snakk med en AI-partner.',
@@ -354,6 +357,7 @@ const ConversationMode: React.FC<Props> = ({ lang, onComplete }) => {
         <ActiveConversation
           scenario={selected}
           lang={lang}
+          onUseAiTask={onUseAiTask}
           onBack={() => setSelected(null)}
           onComplete={handleComplete}
           convLabels={labels}

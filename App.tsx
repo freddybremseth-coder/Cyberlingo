@@ -11,6 +11,7 @@ import AuthScreen from './components/AuthScreen';
 import ApiKeySetup from './components/ApiKeySetup';
 import SubscriptionModal from './components/SubscriptionModal';
 import HomeMode from './components/HomeMode';
+import DailyPracticeMode from './components/DailyPracticeMode';
 import ConversationMode from './components/ConversationMode';
 import ProgressView from './components/ProgressView';
 import SettingsScreen from './components/SettingsScreen';
@@ -112,7 +113,7 @@ const IconProfile = () => (
 const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [activeTab, setActiveTab] = useState<AppTab>('home');
-  const [learnMode, setLearnMode] = useState<LearnMode>('lessons');
+  const [learnMode, setLearnMode] = useState<LearnMode>('daily');
   const [speakMode, setSpeakMode] = useState<SpeakMode>('conversation');
   const [sourceLang, setSourceLang] = useState<SourceLang>('no');
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
@@ -257,12 +258,6 @@ const App: React.FC = () => {
     updated.level = getLevelFromXp(updated.xp);
     setSourceLang(updated.sourceLang);
     setUser(updated);
-
-    // Check if API key is needed
-    const storedKey = localStorage.getItem('cyberlingo_api_key') || updated.apiKey;
-    if (!storedKey) {
-      setNeedsApiKey(true);
-    }
   }, []);
 
   // ─── Login handler ─────────────────────────────────────────────────────
@@ -322,6 +317,31 @@ const App: React.FC = () => {
     });
   }, []);
 
+  // ─── Daily retrieval practice complete ─────────────────────────────────
+  const completeDailyPractice = useCallback((earnedXp: number, words: string[], phrases: string[]) => {
+    setUser(prev => {
+      if (!prev) return prev;
+      const masteredVocab = Array.from(new Set([...(prev.masteredVocab || []), ...words]));
+      const masteredPhrases = Array.from(new Set([...(prev.masteredPhrases || []), ...phrases]));
+      const newXp = prev.xp + earnedXp;
+      const newTodayXp = prev.todayXp + earnedXp;
+      const achs = [...prev.achievements];
+      if (!achs.includes('vocab_50') && masteredVocab.length >= 50) achs.push('vocab_50');
+      if (!achs.includes('vocab_200') && masteredVocab.length >= 200) achs.push('vocab_200');
+      if (!achs.includes('vocab_500') && masteredVocab.length >= 500) achs.push('vocab_500');
+      if (!achs.includes('phrases_50') && masteredPhrases.length >= 50) achs.push('phrases_50');
+      return {
+        ...prev,
+        xp: newXp,
+        todayXp: newTodayXp,
+        level: getLevelFromXp(newXp),
+        masteredVocab,
+        masteredPhrases,
+        achievements: achs,
+      };
+    });
+  }, []);
+
   // ─── Conversation completed ────────────────────────────────────────────
   const onConversationComplete = useCallback(() => {
     setUser(prev => {
@@ -348,9 +368,18 @@ const App: React.FC = () => {
 
   // ─── API key save ──────────────────────────────────────────────────────
   const handleApiKeySave = (key: string) => {
-    localStorage.setItem('cyberlingo_api_key', key);
+    if (key) localStorage.setItem('cyberlingo_api_key', key);
+    else localStorage.removeItem('cyberlingo_api_key');
     setUser(prev => prev ? { ...prev, apiKey: key } : prev);
     setNeedsApiKey(false);
+  };
+
+  const handleApiKeySkip = () => {
+    setNeedsApiKey(false);
+    setActiveTab('home');
+    setLearnMode('daily');
+    setSpeakMode('conversation');
+    setSelectedLesson(null);
   };
 
   // ─── Subscription (handled by Stripe) ─────────────────────────────────
@@ -366,39 +395,50 @@ const App: React.FC = () => {
     return active;
   }, [user, useTrialTask]);
 
+  // ─── AI access check: only requested when an AI feature is used ─────────
+  const checkAiAccess = useCallback((): boolean => {
+    if (!user) return false;
+    const storedKey = localStorage.getItem('cyberlingo_api_key') || user.apiKey;
+    if (!storedKey) {
+      setNeedsApiKey(true);
+      return false;
+    }
+    return checkSubscription();
+  }, [user, checkSubscription]);
+
   // ─── UI labels based on lang ───────────────────────────────────────────
   const ui = ({
     no: {
       navHome: 'Hjem', navLearn: 'Lær', navSpeak: 'Snakk', navProgress: 'Fremgang', navProfile: 'Profil',
-      learnLessons: 'Leksjoner', learnVocab: 'Vokabular', learnVerbs: 'Verb', learnPhrases: 'Fraser', learnCamera: 'Kamera',
+      learnDaily: 'Daglig', learnLessons: 'Leksjoner', learnVocab: 'Vokabular', learnVerbs: 'Verb', learnPhrases: 'Fraser', learnCamera: 'Kamera',
       speakConv: 'Samtale', speakAssist: 'Assistent',
       lessonsTitle: 'Leksjoner', lessonsDesc: 'Lær spansk grammatikk systematisk fra A1 til B2',
       backToLessons: 'Tilbake til leksjoner',
     },
     en: {
       navHome: 'Home', navLearn: 'Learn', navSpeak: 'Speak', navProgress: 'Progress', navProfile: 'Profile',
-      learnLessons: 'Lessons', learnVocab: 'Vocabulary', learnVerbs: 'Verbs', learnPhrases: 'Phrases', learnCamera: 'Camera',
+      learnDaily: 'Daily', learnLessons: 'Lessons', learnVocab: 'Vocabulary', learnVerbs: 'Verbs', learnPhrases: 'Phrases', learnCamera: 'Camera',
       speakConv: 'Conversation', speakAssist: 'Assistant',
       lessonsTitle: 'Lessons', lessonsDesc: 'Learn Spanish grammar systematically from A1 to B2',
       backToLessons: 'Back to lessons',
     },
     de: {
       navHome: 'Start', navLearn: 'Lernen', navSpeak: 'Sprechen', navProgress: 'Fortschritt', navProfile: 'Profil',
-      learnLessons: 'Lektionen', learnVocab: 'Vokabular', learnVerbs: 'Verben', learnPhrases: 'Phrasen', learnCamera: 'Kamera',
+      learnDaily: 'Täglich', learnLessons: 'Lektionen', learnVocab: 'Vokabular', learnVerbs: 'Verben', learnPhrases: 'Phrasen', learnCamera: 'Kamera',
       speakConv: 'Gespräch', speakAssist: 'Assistent',
       lessonsTitle: 'Lektionen', lessonsDesc: 'Lerne Spanisch Grammatik systematisch von A1 bis B2',
       backToLessons: 'Zurück zu Lektionen',
     },
     ru: {
       navHome: 'Главная', navLearn: 'Учиться', navSpeak: 'Говорить', navProgress: 'Прогресс', navProfile: 'Профиль',
-      learnLessons: 'Уроки', learnVocab: 'Словарь', learnVerbs: 'Глаголы', learnPhrases: 'Фразы', learnCamera: 'Камера',
+      learnDaily: 'Каждый день', learnLessons: 'Уроки', learnVocab: 'Словарь', learnVerbs: 'Глаголы', learnPhrases: 'Фразы', learnCamera: 'Камера',
       speakConv: 'Разговор', speakAssist: 'Ассистент',
       lessonsTitle: 'Уроки', lessonsDesc: 'Учите испанскую грамматику систематически от A1 до B2',
       backToLessons: 'Назад к урокам',
     },
-  } as Record<string, { navHome: string; navLearn: string; navSpeak: string; navProgress: string; navProfile: string; learnLessons: string; learnVocab: string; learnVerbs: string; learnPhrases: string; learnCamera: string; speakConv: string; speakAssist: string; lessonsTitle: string; lessonsDesc: string; backToLessons: string }>)[sourceLang] ?? {
+  } as Record<string, { navHome: string; navLearn: string; navSpeak: string; navProgress: string; navProfile: string; learnDaily: string; learnLessons: string; learnVocab: string; learnVerbs: string; learnPhrases: string; learnCamera: string; speakConv: string; speakAssist: string; lessonsTitle: string; lessonsDesc: string; backToLessons: string }>)[sourceLang] ?? {
     navHome: 'Home', navLearn: 'Learn', navSpeak: 'Speak', navProgress: 'Progress', navProfile: 'Profile',
-    learnLessons: 'Lessons', learnVocab: 'Vocabulary', learnVerbs: 'Verbs', learnPhrases: 'Phrases', learnCamera: 'Camera',
+    learnDaily: 'Daily', learnLessons: 'Lessons', learnVocab: 'Vocabulary', learnVerbs: 'Verbs', learnPhrases: 'Phrases', learnCamera: 'Camera',
     speakConv: 'Conversation', speakAssist: 'Assistant',
     lessonsTitle: 'Lessons', lessonsDesc: 'Learn Spanish grammar systematically from A1 to B2',
     backToLessons: 'Back to lessons',
@@ -419,12 +459,11 @@ const App: React.FC = () => {
 
   // ─── Gate: no API key ──────────────────────────────────────────────────
   if (needsApiKey) {
-    return <ApiKeySetup onSave={handleApiKeySave} username={user.username} />;
+    return <ApiKeySetup onSave={handleApiKeySave} onSkip={handleApiKeySkip} username={user.username} />;
   }
 
   // ─── Tab nav change ────────────────────────────────────────────────────
   const handleTabChange = (tab: AppTab) => {
-    if ((tab === 'learn' || tab === 'speak') && !checkSubscription()) return;
     setActiveTab(tab);
     setSelectedLesson(null);
   };
@@ -534,6 +573,7 @@ const App: React.FC = () => {
               style={{ background: 'var(--bg)', borderBottom: '1px solid var(--border)' }}
             >
               {([
+                { id: 'daily',   label: ui.learnDaily,   icon: '🎯' },
                 { id: 'lessons', label: ui.learnLessons, icon: '📖' },
                 { id: 'vocab',   label: ui.learnVocab,   icon: '🔤' },
                 { id: 'verbs',   label: ui.learnVerbs,   icon: '⚡' },
@@ -558,6 +598,14 @@ const App: React.FC = () => {
 
             {/* Content */}
             <div className="p-4 pb-24">
+              {learnMode === 'daily' && (
+                <DailyPracticeMode
+                  user={user}
+                  lang={sourceLang}
+                  onComplete={completeDailyPractice}
+                />
+              )}
+
               {learnMode === 'lessons' && (
                 <div>
                   {!selectedLesson ? (
@@ -671,11 +719,16 @@ const App: React.FC = () => {
                       <QuizComponent
                         topic={selectedLesson[sourceLang].title}
                         lang={sourceLang}
+                        onUseAiTask={checkAiAccess}
                         onMastered={() => markLessonMastered(selectedLesson.id)}
                       />
 
                       <div className="mt-8">
-                        <NeuralDecoder initialSentence="Hola, me gusta aprender español." lang={sourceLang} />
+                        <NeuralDecoder
+                          initialSentence="Hola, me gusta aprender español."
+                          lang={sourceLang}
+                          onUseAiTask={checkAiAccess}
+                        />
                       </div>
                     </div>
                   )}
@@ -683,11 +736,11 @@ const App: React.FC = () => {
               )}
 
               {learnMode === 'vocab' && (
-                <VocabMode lang={sourceLang} onMasteredUpdate={updateMasteredVocab} />
+                <VocabMode lang={sourceLang} onUseAiTask={checkAiAccess} onMasteredUpdate={updateMasteredVocab} />
               )}
-              {learnMode === 'verbs' && <VerbMode lang={sourceLang} />}
-              {learnMode === 'phrases' && <PhraseMode lang={sourceLang} />}
-              {learnMode === 'vision' && <VisionMode lang={sourceLang} />}
+              {learnMode === 'verbs' && <VerbMode lang={sourceLang} onUseAiTask={checkAiAccess} />}
+              {learnMode === 'phrases' && <PhraseMode lang={sourceLang} onUseAiTask={checkAiAccess} />}
+              {learnMode === 'vision' && <VisionMode lang={sourceLang} onUseAiTask={checkAiAccess} />}
             </div>
           </div>
         )}
@@ -723,10 +776,10 @@ const App: React.FC = () => {
 
             <div className="p-4 pb-24">
               {speakMode === 'conversation' && (
-                <ConversationMode lang={sourceLang} onComplete={onConversationComplete} />
+                <ConversationMode lang={sourceLang} onUseAiTask={checkAiAccess} onComplete={onConversationComplete} />
               )}
-              {speakMode === 'luna-live' && <LunaLive lang={sourceLang} />}
-              {speakMode === 'luna-text' && <AIAssistant lang={sourceLang} />}
+              {speakMode === 'luna-live' && <LunaLive lang={sourceLang} onUseAiTask={checkAiAccess} />}
+              {speakMode === 'luna-text' && <AIAssistant lang={sourceLang} onUseAiTask={checkAiAccess} />}
             </div>
           </div>
         )}

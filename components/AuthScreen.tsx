@@ -296,7 +296,7 @@ const AuthScreen: React.FC<Props> = ({ onLogin }) => {
         </form>
 
         <p className="text-center text-xs mt-6" style={{ color: 'var(--text-faint)' }}>
-          Fremgangen din lagres lokalt på enheten. Du trenger en Gemini API-nøkkel for å bruke AI-funksjoner.
+          Fremgangen din lagres lokalt på enheten. AI-nøkkel kan legges til senere for samtaler og genererte øvelser.
         </p>
       </div>
     </div>

@@ -12,7 +12,7 @@ interface VisionResult {
   pronunciation: string;
 }
 
-const VisionMode: React.FC<{ lang: SourceLang }> = ({ lang }) => {
+const VisionMode: React.FC<{ lang: SourceLang; onUseAiTask?: () => boolean }> = ({ lang, onUseAiTask }) => {
   const [isCameraRequested, setIsCameraRequested] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [results, setResults] = useState<VisionResult[]>([]);
@@ -142,6 +142,7 @@ const VisionMode: React.FC<{ lang: SourceLang }> = ({ lang }) => {
 
   const captureAndAnalyze = async () => {
     if (!videoRef.current || !canvasRef.current || !isStreaming) return;
+    if (onUseAiTask && !onUseAiTask()) return;
     
     const video = videoRef.current;
     if (video.videoWidth === 0 || video.videoHeight === 0) {

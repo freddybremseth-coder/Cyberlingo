@@ -7,7 +7,7 @@ interface Message {
   text: string;
 }
 
-const AIAssistant: React.FC<{ lang?: SourceLang }> = ({ lang = 'no' }) => {
+const AIAssistant: React.FC<{ lang?: SourceLang; onUseAiTask?: () => boolean }> = ({ lang = 'no', onUseAiTask }) => {
   const [query, setQuery] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -71,6 +71,7 @@ const AIAssistant: React.FC<{ lang?: SourceLang }> = ({ lang = 'no' }) => {
   const handleAsk = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim() || loading) return;
+    if (onUseAiTask && !onUseAiTask()) return;
 
     const userText = query.trim();
     setMessages(prev => [...prev, { role: 'user', text: userText }]);

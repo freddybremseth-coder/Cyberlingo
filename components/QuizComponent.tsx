@@ -6,9 +6,10 @@ interface Props {
   topic: string;
   lang?: SourceLang;
   onMastered?: () => void;
+  onUseAiTask?: () => boolean;
 }
 
-const QuizComponent: React.FC<Props> = ({ topic, lang = 'no', onMastered }) => {
+const QuizComponent: React.FC<Props> = ({ topic, lang = 'no', onMastered, onUseAiTask }) => {
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -34,6 +35,7 @@ const QuizComponent: React.FC<Props> = ({ topic, lang = 'no', onMastered }) => {
   };
 
   const startQuiz = async (level: number) => {
+    if (onUseAiTask && !onUseAiTask()) return;
     setLoading(true);
     setCurrentLevel(level);
     setError(null);
@@ -85,6 +87,7 @@ const QuizComponent: React.FC<Props> = ({ topic, lang = 'no', onMastered }) => {
 
   const getHint = async () => {
     if (hintsLeft <= 0 || hintLoading || showResult) return;
+    if (onUseAiTask && !onUseAiTask()) return;
     setHintLoading(true);
     try {
       const h = await getGrammarExplanation(

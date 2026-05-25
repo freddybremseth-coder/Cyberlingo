@@ -22,7 +22,7 @@ const CATEGORIES = [
   { id: 'Small Talk', icon: '💬' },
 ];
 
-const PhraseMode: React.FC<{ lang: SourceLang }> = ({ lang }) => {
+const PhraseMode: React.FC<{ lang: SourceLang; onUseAiTask?: () => boolean }> = ({ lang, onUseAiTask }) => {
   const [phrases, setPhrases] = useState<Phrase[]>([]);
   const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].id);
   const [loading, setLoading] = useState(false);
@@ -37,6 +37,7 @@ const PhraseMode: React.FC<{ lang: SourceLang }> = ({ lang }) => {
   }, [activeCategory, lang]);
 
   const fetchBatch = async () => {
+    if (onUseAiTask && !onUseAiTask()) return;
     setLoading(true);
     setFetchError(null);
     try {
