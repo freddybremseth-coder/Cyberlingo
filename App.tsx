@@ -227,7 +227,12 @@ const App: React.FC = () => {
 
         if (checkoutSessionId) {
           try {
-            const response = await fetch(`/api/verify-session?session_id=${encodeURIComponent(checkoutSessionId)}`);
+            const { data: currentSession } = await supabase.auth.getSession();
+            const token = currentSession.session?.access_token;
+            const response = await fetch(
+              `/api/verify-session?session_id=${encodeURIComponent(checkoutSessionId)}`,
+              token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
+            );
             const data = await response.json();
             if (response.ok && data.subscriptionId) {
               cloudUser = {
