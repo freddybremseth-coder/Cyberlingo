@@ -8,9 +8,10 @@ import NeonButton from './NeonButton';
 interface LunaLiveProps {
   lang: SourceLang;
   onUseAiTask?: () => boolean;
+  allowed?: boolean;
 }
 
-const LunaLive: React.FC<LunaLiveProps> = ({ lang, onUseAiTask }) => {
+const LunaLive: React.FC<LunaLiveProps> = ({ lang, onUseAiTask, allowed = false }) => {
   const [isActive, setIsActive] = useState(false);
   const [transcript, setTranscript] = useState<{user: string, bot: string}[]>([]);
   const [currentInput, setCurrentInput] = useState('');
@@ -48,6 +49,10 @@ const LunaLive: React.FC<LunaLiveProps> = ({ lang, onUseAiTask }) => {
   };
 
   const startConnection = async () => {
+    if (!allowed) {
+      setError('Luna Live er kun tilgjengelig for eierkontoen.');
+      return;
+    }
     if (onUseAiTask && !onUseAiTask()) return;
     try {
       setError(null);

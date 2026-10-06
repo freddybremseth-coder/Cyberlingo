@@ -121,10 +121,16 @@ const App: React.FC = () => {
   const [showSubModal, setShowSubModal] = useState(false);
   const [needsApiKey, setNeedsApiKey] = useState(false);
 
-  const isAdmin = user?.email === ADMIN_EMAIL;
+  const isAdmin = isLifetimeEmail(user?.email);
   const hasActiveAccess = user
-    ? (user.email === ADMIN_EMAIL || isSubscriptionActive(user.subscription, user.email))
+    ? (isAdmin || isSubscriptionActive(user.subscription, user.email))
     : false;
+
+  useEffect(() => {
+    if (!isAdmin && speakMode === 'luna-live') {
+      setSpeakMode('conversation');
+    }
+  }, [isAdmin, speakMode]);
 
   // Call this before every AI-powered task. Returns false if trial exhausted.
   const useTrialTask = useCallback((): boolean => {
@@ -763,7 +769,9 @@ const App: React.FC = () => {
                 { id: 'conversation', label: ui.speakConv,   icon: '🎭' },
                 { id: 'luna-live',    label: 'Luna Live',    icon: '🎙️' },
                 { id: 'luna-text',    label: ui.speakAssist, icon: '🤖' },
-              ] as { id: SpeakMode; label: string; icon: string }[]).map(item => (
+              ] as { id: SpeakMode; label: string; icon: string }[])
+                .filter(item => isAdmin || item.id !== 'luna-live')
+                .map(item => (
                 <button
                   key={item.id}
                   onClick={() => setSpeakMode(item.id)}
@@ -784,7 +792,9 @@ const App: React.FC = () => {
               {speakMode === 'conversation' && (
                 <ConversationMode lang={sourceLang} onUseAiTask={checkAiAccess} onComplete={onConversationComplete} />
               )}
-              {speakMode === 'luna-live' && <LunaLive lang={sourceLang} onUseAiTask={checkAiAccess} />}
+              {speakMode === 'luna-live' && isAdmin && (
+                <LunaLive lang={sourceLang} onUseAiTask={checkAiAccess} allowed={isAdmin} />
+              )}
               {speakMode === 'luna-text' && <AIAssistant lang={sourceLang} onUseAiTask={checkAiAccess} />}
             </div>
           </div>
