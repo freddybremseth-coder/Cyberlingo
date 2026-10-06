@@ -9,7 +9,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const authUser = await requireSupabaseUser(req);
     const { sessionId } = req.body as { sessionId?: string };
     if (!sessionId) return res.status(400).json({ error: 'Missing checkout session' });
 
@@ -18,17 +17,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(403).json({ error: 'Checkout session is not valid for portal access' });
     }
 
-    const sessionUserId = checkout.client_reference_id || checkout.metadata?.cyberlingo_user_id || null;
-    const checkoutEmail = (checkout.customer_details?.email || checkout.customer_email || '').toLowerCase();
+    const authHeader = Array.isArray(req.headers.authorization)
+      ? req.headers.authorization[0]
+      : req.headers.authorization;
 
-    if (sessionUserId) {
-      if (sessionUserId !== authUser.id) {
+    if (authHeader?.startsWith('Bearer ')) {
+      const authUser = await requireSupabaseUser(req);
+      const sessionUserId = checkout.client_reference_id || checkout.metadata?.cyberlingo_user_id || null;
+      const checkoutEmail = (checkout.customer_details?.email || checkout.customer_email || '').toLowerCase();
+
+      if (sessionUserId) {
+        if (sessionUserId !== authUser.id) {
+          return res.status(403).json({ error: 'Checkout session does not belong to this user' });
+        }
+      } else if (checkoutEmail && checkoutEmail !== authUser.email) {
         return res.status(403).json({ error: 'Checkout session does not belong to this user' });
-      }
-    } else if (!checkoutEmail || checkoutEmail !== authUser.email) {
-      const customer = await stripe.customers.retrieve(checkout.customer);
-      if ('deleted' in customer || (customer.email || '').toLowerCase() !== authUser.email) {
-        return res.status(403).json({ error: 'Customer does not belong to this user' });
       }
     }
 
