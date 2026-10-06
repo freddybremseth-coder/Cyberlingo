@@ -89,7 +89,7 @@ const kindLabel: Record<string, string> = {
   lifetime: 'Lifetime',
 };
 
-const AdminDashboard: React.FC<Props> = ({ user, onLogout, onLangChange }) => {
+const AdminDashboard: React.FC<Props> = ({ user, onLogout, onApiKeySave, onLangChange }) => {
   const [users, setUsers] = useState<AdminProfile[]>([]);
   const [invitations, setInvitations] = useState<AdminInvitation[]>([]);
   const [stripeCustomers, setStripeCustomers] = useState<StripeCustomerRow[]>([]);
@@ -108,6 +108,8 @@ const AdminDashboard: React.FC<Props> = ({ user, onLogout, onLangChange }) => {
   const [period, setPeriod] = useState<PeriodChoice>('90');
   const [customDate, setCustomDate] = useState('');
   const [note, setNote] = useState('');
+  const [lunaKey, setLunaKey] = useState('');
+  const [lunaKeySaved, setLunaKeySaved] = useState(false);
 
   const refresh = async () => {
     setLoading(true);
@@ -565,6 +567,37 @@ const AdminDashboard: React.FC<Props> = ({ user, onLogout, onLangChange }) => {
             <a href="https://dashboard.stripe.com" target="_blank" rel="noopener noreferrer" className="btn-secondary inline-block px-4 py-2 text-sm">
               Åpne Stripe Dashboard ↗
             </a>
+          </div>
+
+          <div className="p-4 rounded-2xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+            <p className="font-bold mb-1">🎙️ Luna Live · eierkonto</p>
+            <p className="text-sm mb-3" style={{ color: 'var(--text-muted)' }}>
+              Luna er kun tilgjengelig for din Lifetime-konto. Nøkkelen lagres lokalt i denne nettleseren og sendes ikke til Cyberlingo-databasen.
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="password"
+                value={lunaKey}
+                onChange={e => { setLunaKey(e.target.value); setLunaKeySaved(false); }}
+                placeholder="Gemini-nøkkel for Luna"
+                className="app-input flex-1"
+              />
+              <button
+                onClick={() => {
+                  const key = lunaKey.trim();
+                  if (!key) return;
+                  onApiKeySave(key);
+                  setLunaKey('');
+                  setLunaKeySaved(true);
+                }}
+                className="btn-secondary px-4 text-sm"
+              >
+                Lagre
+              </button>
+            </div>
+            {lunaKeySaved && (
+              <p className="text-xs mt-2" style={{ color: 'var(--success)' }}>✓ Luna-nøkkel lagret lokalt.</p>
+            )}
           </div>
 
           <div className="p-4 rounded-2xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
