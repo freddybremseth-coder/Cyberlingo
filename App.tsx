@@ -6,10 +6,11 @@ import {
   LIFETIME_USERNAME, createLifetimeSubscription, isLifetimeEmail,
 } from './types';
 import { INITIAL_LESSONS } from './data/lessons';
+import { supabase } from './services/supabaseClient';
+import { loadPlatformUser, savePlatformUser, signOutPlatform, verifyCheckout } from './services/platformClient';
 
 // Components
 import AuthScreen from './components/AuthScreen';
-import ApiKeySetup from './components/ApiKeySetup';
 import SubscriptionModal from './components/SubscriptionModal';
 import HomeMode from './components/HomeMode';
 import DailyPracticeMode from './components/DailyPracticeMode';
@@ -119,7 +120,7 @@ const App: React.FC = () => {
   const [sourceLang, setSourceLang] = useState<SourceLang>('no');
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [showSubModal, setShowSubModal] = useState(false);
-  const [needsApiKey, setNeedsApiKey] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
 
   const isAdmin = isLifetimeEmail(user?.email);
   const hasActiveAccess = user
@@ -137,6 +138,10 @@ const App: React.FC = () => {
     if (!user) return false;
     if (isLifetimeEmail(user.email)) return true;
     if (user.subscription.plan !== 'trial') return hasActiveAccess;
+    if (!isSubscriptionActive(user.subscription, user.email)) {
+      setShowSubModal(true);
+      return false;
+    }
     const left = getTrialTasksLeft(user);
     if (left <= 0) {
       setShowSubModal(true);
@@ -146,77 +151,14 @@ const App: React.FC = () => {
     return true;
   }, [user, hasActiveAccess]);
 
-  // ─── Auto-login + Stripe session handling ─────────────────────────────
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const sessionId = params.get('session_id');
-
-    const lastUser = localStorage.getItem('cyberlingo_current_user');
-    const users = JSON.parse(localStorage.getItem('cyberlingo_users') || '{}');
-
-    if (sessionId) {
-      window.history.replaceState({}, '', window.location.pathname);
-      if (lastUser && users[lastUser]) {
-        fetch(`/api/verify-session?session_id=${sessionId}`)
-          .then(r => r.json())
-          .then(data => {
-            if (data.subscriptionId) {
-              const updated = {
-                ...users[lastUser],
-                subscription: {
-                  ...users[lastUser].subscription,
-                  plan: data.plan,
-                  subscribedDate: Date.now(),
-                  stripeCustomerId: data.customerId,
-                  stripeCheckoutSessionId: sessionId,
-                  stripeSubscriptionId: data.subscriptionId,
-                  stripeStatus: data.status,
-                  currentPeriodEnd: data.currentPeriodEnd,
-                  cancelAtPeriodEnd: data.cancelAtPeriodEnd,
-                },
-              };
-              initUser(updated);
-            } else {
-              initUser(users[lastUser]);
-            }
-          })
-          .catch(() => initUser(users[lastUser]));
-      }
-      return;
-    }
-
-    if (lastUser && users[lastUser]) {
-      const u = users[lastUser];
-      // Re-verify subscription status from Stripe on load
-      if (u.subscription?.stripeSubscriptionId) {
-        fetch(`/api/subscription-status?subscriptionId=${u.subscription.stripeSubscriptionId}`)
-          .then(r => r.json())
-          .then(data => {
-            if (data.status) {
-              const updated = {
-                ...u,
-                subscription: {
-                  ...u.subscription,
-                  stripeStatus: data.status,
-                  currentPeriodEnd: data.currentPeriodEnd,
-                  cancelAtPeriodEnd: data.cancelAtPeriodEnd,
-                },
-              };
-              initUser(updated);
-            } else {
-              initUser(u);
-            }
-          })
-          .catch(() => initUser(u));
-      } else {
-        initUser(u);
-      }
-    }
-  }, []);
-
   // ─── Persist on change ─────────────────────────────────────────────────
   useEffect(() => {
-    if (user) saveUser(user);
+    if (!user) return;
+    saveUser(user);
+    const timer = window.setTimeout(() => {
+      savePlatformUser(user).catch(err => console.warn('RealtyFlow progress sync failed:', err));
+    }, 700);
+    return () => window.clearTimeout(timer);
   }, [user]);
 
   // ─── Init user: streak, daily reset ───────────────────────────────────
@@ -273,13 +215,67 @@ const App: React.FC = () => {
     setUser(updated);
   }, []);
 
-  // ─── Login handler ─────────────────────────────────────────────────────
-  const handleLogin = (newUser: UserProfile) => {
-    initUser(newUser);
-  };
+  // ─── Shared RealtyFlow Auth session ─────────────────────────────────────
+  useEffect(() => {
+    let alive = true;
+
+    const hydrate = async (authUser: any, checkoutSessionId?: string | null) => {
+      try {
+        if (checkoutSessionId) {
+          await verifyCheckout(checkoutSessionId);
+        }
+        const platformUser = await loadPlatformUser(authUser);
+        if (alive) initUser(platformUser);
+      } catch (err) {
+        console.error('Could not load Spanish account:', err);
+      } finally {
+        if (alive) setAuthLoading(false);
+      }
+    };
+
+    const boot = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const checkoutSessionId =
+        params.get('checkout') === 'success' ? params.get('session_id') : null;
+
+      if (params.has('checkout') || params.has('session_id')) {
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+
+      const { data, error } = await supabase.auth.getSession();
+      if (error) console.error('Auth session error:', error);
+
+      if (data.session?.user) {
+        await hydrate(data.session.user, checkoutSessionId);
+      } else if (alive) {
+        setAuthLoading(false);
+      }
+    };
+
+    boot();
+
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!alive) return;
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setAuthLoading(false);
+        return;
+      }
+      if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session?.user) {
+        setAuthLoading(true);
+        hydrate(session.user);
+      }
+    });
+
+    return () => {
+      alive = false;
+      listener.subscription.unsubscribe();
+    };
+  }, [initUser]);
 
   // ─── Logout ────────────────────────────────────────────────────────────
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOutPlatform();
     localStorage.removeItem('cyberlingo_current_user');
     setUser(null);
     setActiveTab('home');
@@ -384,15 +380,6 @@ const App: React.FC = () => {
     if (key) localStorage.setItem('cyberlingo_api_key', key);
     else localStorage.removeItem('cyberlingo_api_key');
     setUser(prev => prev ? { ...prev, apiKey: key } : prev);
-    setNeedsApiKey(false);
-  };
-
-  const handleApiKeySkip = () => {
-    setNeedsApiKey(false);
-    setActiveTab('home');
-    setLearnMode('daily');
-    setSpeakMode('conversation');
-    setSelectedLesson(null);
   };
 
   // ─── Subscription (handled by Stripe) ─────────────────────────────────
@@ -411,11 +398,6 @@ const App: React.FC = () => {
   // ─── AI access check: only requested when an AI feature is used ─────────
   const checkAiAccess = useCallback((): boolean => {
     if (!user) return false;
-    const storedKey = localStorage.getItem('cyberlingo_api_key') || user.apiKey;
-    if (!storedKey) {
-      setNeedsApiKey(true);
-      return false;
-    }
     return checkSubscription();
   }, [user, checkSubscription]);
 
@@ -465,14 +447,23 @@ const App: React.FC = () => {
   }, {} as Record<string, Lesson[]>);
   const levelsOrder: Lesson['level'][] = ['Nybegynner', 'Mellomnivå', 'Ekspert'];
 
-  // ─── Gate: not logged in ───────────────────────────────────────────────
-  if (!user) {
-    return <AuthScreen onLogin={handleLogin} />;
+  // ─── Gate: auth/session loading ─────────────────────────────────────────
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg)' }}>
+        <div className="text-center">
+          <div className="w-9 h-9 border-4 border-orange-400 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>
+            Laster ChatGenius-kontoen din...
+          </p>
+        </div>
+      </div>
+    );
   }
 
-  // ─── Gate: no API key ──────────────────────────────────────────────────
-  if (needsApiKey) {
-    return <ApiKeySetup onSave={handleApiKeySave} onSkip={handleApiKeySkip} username={user.username} />;
+  // ─── Gate: not logged in ───────────────────────────────────────────────
+  if (!user) {
+    return <AuthScreen />;
   }
 
   // ─── Tab nav change ────────────────────────────────────────────────────
