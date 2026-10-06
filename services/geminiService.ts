@@ -1,20 +1,26 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { SourceLang } from "../types";
+import { supabase } from "./supabaseClient";
 
 const GEMINI_TEXT_MODEL = 'gemini-3.6-flash';
 
 // ─── Provider detection ────────────────────────────────────────────────────
 export type AIProvider = 'gemini' | 'claude' | 'openai';
 
+const SERVER_GEMINI = '__cyberlingo_server_gemini__';
+
 export const detectProvider = (key: string): AIProvider => {
-  if (key.startsWith('AIza')) return 'gemini';
+  if (key === SERVER_GEMINI || key.startsWith('AIza')) return 'gemini';
   if (key.startsWith('sk-ant-')) return 'claude';
   return 'openai';
 };
 
 // ─── API key management ────────────────────────────────────────────────────
+export const getLocalApiKey = (): string =>
+  localStorage.getItem('cyberlingo_api_key') || '';
+
 export const getStoredApiKey = (): string =>
-  localStorage.getItem('cyberlingo_api_key') || (process.env.API_KEY ?? '');
+  getLocalApiKey() || SERVER_GEMINI;
 
 export const setStoredApiKey = (key: string): void =>
   localStorage.setItem('cyberlingo_api_key', key);
@@ -22,10 +28,35 @@ export const setStoredApiKey = (key: string): void =>
 export const clearStoredApiKey = (): void =>
   localStorage.removeItem('cyberlingo_api_key');
 
-const getAI = (): GoogleGenAI => {
-  const key = getStoredApiKey();
-  if (!key) throw new Error('Ingen API-nøkkel funnet. Gå til Profil → Innstillinger.');
-  return new GoogleGenAI({ apiKey: key });
+const serverGenerateContent = async (payload: any): Promise<any> => {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new Error('Du må være logget inn for å bruke AI.');
+
+  const response = await fetch('/api/gemini', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  const result = await response.json();
+  if (!response.ok) {
+    throw new Error(result.error || 'AI-tjenesten er midlertidig utilgjengelig.');
+  }
+  return result;
+};
+
+const getAI = (): any => {
+  const localKey = getLocalApiKey();
+  if (localKey) return new GoogleGenAI({ apiKey: localKey });
+
+  return {
+    models: {
+      generateContent: serverGenerateContent,
+    },
+  };
 };
 
 // ─── Low-level fetch helpers ───────────────────────────────────────────────
