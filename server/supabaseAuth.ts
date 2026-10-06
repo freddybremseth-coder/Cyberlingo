@@ -39,11 +39,8 @@ export const requireSupabaseUser = async (req: VercelRequest): Promise<VerifiedS
   return { id: user.id, email: user.email.trim().toLowerCase() };
 };
 
-export const requireActiveAccess = async (req: VercelRequest): Promise<VerifiedSupabaseUser> => {
+export const hasDatabaseAccess = async (req: VercelRequest): Promise<boolean> => {
   const authorization = getAuthorization(req);
-  const user = await requireSupabaseUser(req);
-
-  if (user.email === 'freddy.bremseth@gmail.com') return user;
 
   const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/has_active_access`, {
     method: 'POST',
@@ -55,14 +52,15 @@ export const requireActiveAccess = async (req: VercelRequest): Promise<VerifiedS
     body: '{}',
   });
 
-  if (!response.ok) {
-    throw Object.assign(new Error('Could not verify access'), { statusCode: 403 });
-  }
+  if (!response.ok) return false;
+  return (await response.json()) === true;
+};
 
-  const active = await response.json();
-  if (active !== true) {
+export const requireActiveAccess = async (req: VercelRequest): Promise<VerifiedSupabaseUser> => {
+  const user = await requireSupabaseUser(req);
+  if (user.email === 'freddy.bremseth@gmail.com') return user;
+  if (!(await hasDatabaseAccess(req))) {
     throw Object.assign(new Error('Active subscription or grant required'), { statusCode: 402 });
   }
-
   return user;
 };
