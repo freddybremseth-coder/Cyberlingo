@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { UserProfile, TRIAL_FREE_TASKS, getTrialTasksLeft } from '../types';
+import { supabase } from '../services/supabaseClient';
 
 interface Props {
   user: UserProfile;
@@ -18,7 +19,6 @@ const SubscriptionModal: React.FC<Props> = ({ user, onClose }) => {
     { icon: '📖', text: 'Alle grammatikkleksjoner (A1–B2)' },
     { icon: '💬', text: 'Ubegrenset samtaleøvelse med AI' },
     { icon: '🔤', text: '500+ ord og fraser per kategori' },
-    { icon: '🎙️', text: 'Luna Live – sanntids stemmeprat' },
     { icon: '📷', text: 'Kamera-læringsmodus' },
     { icon: '🔥', text: 'Daglig streak og fremgangssporing' },
     { icon: '🏆', text: 'Prestasjoner og XP-system' },
@@ -28,13 +28,17 @@ const SubscriptionModal: React.FC<Props> = ({ user, onClose }) => {
     setLoading(true);
     setError(null);
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error('Du må være logget inn for å abonnere');
+
       const res = await fetch('/api/create-checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          plan: selectedPlan,
-          returnUrl: window.location.origin,
-        }),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ plan: selectedPlan }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Checkout feilet');
