@@ -5,7 +5,7 @@ export type LearnMode = 'daily' | 'lessons' | 'vocab' | 'verbs' | 'phrases' | 'v
 export type SpeakMode = 'conversation' | 'luna-live' | 'luna-text';
 
 export interface SubscriptionStatus {
-  plan: 'trial' | 'monthly' | 'yearly' | 'lifetime' | 'none';
+  plan: 'trial' | 'monthly' | 'yearly' | 'lifetime' | 'complimentary' | 'none';
   trialStartDate: number;
   subscribedDate: number | null;
   expiresAt: number | null;
@@ -15,6 +15,8 @@ export interface SubscriptionStatus {
   currentPeriodEnd?: number;
   stripeStatus?: 'active' | 'trialing' | 'past_due' | 'canceled' | 'incomplete' | 'unpaid';
   cancelAtPeriodEnd?: boolean;
+  accessKind?: 'trial' | 'paid' | 'manual' | 'family' | 'partner' | 'promo' | 'lifetime';
+  accessStatus?: 'active' | 'grace' | 'suspended';
 }
 
 export interface UserProfile {
@@ -356,11 +358,14 @@ export const createLifetimeSubscription = (existing?: Partial<SubscriptionStatus
   subscribedDate: existing?.subscribedDate ?? Date.now(),
   expiresAt: null,
   stripeStatus: 'active',
+  accessKind: 'lifetime',
+  accessStatus: 'active',
 });
 
 export const getTrialDaysLeft = (sub: SubscriptionStatus): number => {
   if (sub.plan !== 'trial') return 0;
-  const msLeft = (sub.trialStartDate + TRIAL_DAYS * 86400_000) - Date.now();
+  const expiry = sub.expiresAt ?? (sub.trialStartDate + TRIAL_DAYS * 86400_000);
+  const msLeft = expiry - Date.now();
   return Math.max(0, Math.ceil(msLeft / 86400_000));
 };
 
@@ -372,11 +377,18 @@ export const getTrialTasksLeft = (user: UserProfile): number => {
 
 export const isSubscriptionActive = (sub: SubscriptionStatus, email?: string): boolean => {
   if (isLifetimeEmail(email) || sub.plan === 'lifetime') return true;
-  if (sub.plan === 'trial') return true; // task limit checked separately
+  if (sub.accessStatus === 'suspended') return false;
+  if (sub.plan === 'trial') {
+    const expiry = sub.expiresAt ?? (sub.trialStartDate + TRIAL_DAYS * 86400_000);
+    return Date.now() < expiry;
+  }
+  if (sub.plan === 'complimentary') {
+    return sub.expiresAt === null || sub.expiresAt === undefined || Date.now() < sub.expiresAt;
+  }
   if (sub.plan === 'monthly' || sub.plan === 'yearly') {
-    if (sub.stripeStatus && sub.stripeStatus !== 'active') return false;
-    if (sub.currentPeriodEnd) return Date.now() < sub.currentPeriodEnd;
-    return true;
+    if (sub.stripeStatus && !['active', 'trialing', 'past_due'].includes(sub.stripeStatus)) return false;
+    if (sub.currentPeriodEnd) return Date.now() < sub.currentPeriodEnd || sub.accessStatus === 'grace';
+    return sub.accessStatus !== 'suspended';
   }
   return false;
 };
