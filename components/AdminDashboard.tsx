@@ -1,6 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { UserProfile, SourceLang } from '../types';
-import { setStoredApiKey, clearStoredApiKey, validateApiKey, detectProvider } from '../services/geminiService';
+import React, { useEffect, useMemo, useState } from 'react';
+import { SourceLang, UserProfile } from '../types';
+import {
+  AccessKind,
+  AdminInvitation,
+  AdminProfile,
+  grantAccess,
+  inviteUser,
+  listAdminInvitations,
+  listAdminUsers,
+  revokeAccess,
+} from '../services/accountService';
 
 interface Props {
   user: UserProfile;
@@ -9,135 +18,176 @@ interface Props {
   onLangChange: (lang: SourceLang) => void;
 }
 
-interface Stats {
-  totalCustomers: number;
-  activeSubscriptions: number;
-  monthlySubscribers: number;
-  yearlySubscribers: number;
-  canceledSubscriptions: number;
-  mrr: number;
-  arr: number;
-  totalRevenue: number;
-  last30DaysRevenue: number;
-  churnRate: number;
-}
+type GrantKind = Exclude<AccessKind, 'trial' | 'paid'>;
+type PeriodChoice = '7' | '30' | '90' | '365' | 'custom' | 'lifetime';
 
-interface Customer {
-  id: string;
-  email: string | null;
-  name: string | null;
-  created: number;
-  subscription: {
-    id: string;
-    status: string;
-    plan: 'monthly' | 'yearly';
-    currentPeriodEnd: number;
-    cancelAtPeriodEnd: boolean;
-  } | null;
-}
+const fmtDate = (iso?: string | null) =>
+  iso
+    ? new Date(iso).toLocaleDateString('nb-NO', { day: '2-digit', month: 'short', year: 'numeric' })
+    : 'Ubegrenset';
 
-interface Charge {
-  id: string;
-  amount: number;
-  currency: string;
-  status: string;
-  email: string | null;
-  created: number;
-  description: string | null;
-}
+const endsFromChoice = (choice: PeriodChoice, customDate?: string): string | null => {
+  if (choice === 'lifetime') return null;
+  if (choice === 'custom') {
+    if (!customDate) throw new Error('Velg sluttdato');
+    const d = new Date(`${customDate}T23:59:59`);
+    if (Number.isNaN(d.getTime()) || d.getTime() <= Date.now()) throw new Error('Sluttdato må være i fremtiden');
+    return d.toISOString();
+  }
+  const days = Number(choice);
+  return new Date(Date.now() + days * 86400_000).toISOString();
+};
 
-const StatCard: React.FC<{ icon: string; label: string; value: string; sub?: string; color?: string }> = ({ icon, label, value, sub, color }) => (
-  <div
-    className="p-5 rounded-2xl"
-    style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
-  >
-    <div className="flex items-center justify-between mb-2">
-      <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{label}</span>
-      <span className="text-xl">{icon}</span>
-    </div>
-    <p className="text-3xl font-black" style={{ color: color || 'var(--text)' }}>{value}</p>
-    {sub && <p className="text-xs mt-1" style={{ color: 'var(--text-faint)' }}>{sub}</p>}
-  </div>
-);
+const activeEntitlement = (profile: AdminProfile) => {
+  const now = Date.now();
+  return profile.entitlements
+    .filter(e =>
+      e.status === 'active' &&
+      new Date(e.starts_at).getTime() <= now &&
+      (!e.ends_at || new Date(e.ends_at).getTime() > now)
+    )
+    .sort((a, b) => {
+      const rank: Record<string, number> = { lifetime: 100, family: 90, partner: 80, manual: 70, promo: 60, paid: 50, trial: 10 };
+      return (rank[b.kind] || 0) - (rank[a.kind] || 0);
+    })[0] || null;
+};
 
-const AdminDashboard: React.FC<Props> = ({ user, onLogout, onApiKeySave, onLangChange }) => {
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [charges, setCharges] = useState<Charge[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<'overview' | 'customers' | 'payments' | 'local'>('overview');
+const kindLabel: Record<string, string> = {
+  trial: 'Prøve',
+  paid: 'Betalt',
+  manual: 'Manuell',
+  family: 'Familie',
+  partner: 'Partner',
+  promo: 'Promo',
+  lifetime: 'Lifetime',
+};
+
+const AdminDashboard: React.FC<Props> = ({ user, onLogout, onLangChange }) => {
+  const [users, setUsers] = useState<AdminProfile[]>([]);
+  const [invitations, setInvitations] = useState<AdminInvitation[]>([]);
+  const [tab, setTab] = useState<'users' | 'invite' | 'invitations' | 'system'>('users');
+  const [loading, setLoading] = useState(true);
+  const [working, setWorking] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [search, setSearch] = useState('');
 
-  // Local users (from localStorage) - registered but not necessarily paying
-  const [localUsers, setLocalUsers] = useState<UserProfile[]>([]);
+  const [fullName, setFullName] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [accessKind, setAccessKind] = useState<GrantKind>('family');
+  const [period, setPeriod] = useState<PeriodChoice>('90');
+  const [customDate, setCustomDate] = useState('');
+  const [note, setNote] = useState('');
 
-  useEffect(() => {
-    loadLocalUsers();
-  }, []);
-
-  const loadLocalUsers = () => {
-    const users = JSON.parse(localStorage.getItem('cyberlingo_users') || '{}');
-    setLocalUsers(Object.values(users));
-  };
-
-  const fetchStats = async () => {
+  const refresh = async () => {
     setLoading(true);
-    setError(null);
+    setError('');
     try {
-      const res = await fetch(`/api/admin-stats?email=${encodeURIComponent(user.email)}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to load');
-      setStats(data.stats);
-      setCustomers(data.customers);
-      setCharges(data.recentCharges);
+      const [userRows, inviteRows] = await Promise.all([listAdminUsers(), listAdminInvitations()]);
+      setUsers(userRows);
+      setInvitations(inviteRows);
     } catch (err: any) {
-      setError(err.message);
+      setError(err?.message || 'Kunne ikke hente admin-data');
     } finally {
       setLoading(false);
     }
   };
 
-  const fmt = (n: number) => n.toLocaleString('nb-NO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const fmtDate = (ts: number) => new Date(ts).toLocaleDateString('nb-NO', { day: '2-digit', month: 'short', year: 'numeric' });
+  useEffect(() => {
+    refresh();
+  }, []);
 
-  const filteredCustomers = customers.filter(c =>
-    !search ||
-    c.email?.toLowerCase().includes(search.toLowerCase()) ||
-    c.name?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredUsers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter(u =>
+      u.email.toLowerCase().includes(q) ||
+      (u.full_name || '').toLowerCase().includes(q) ||
+      (u.phone || '').toLowerCase().includes(q)
+    );
+  }, [users, search]);
 
-  const filteredLocal = localUsers.filter(u =>
-    !search ||
-    u.email?.toLowerCase().includes(search.toLowerCase()) ||
-    u.username?.toLowerCase().includes(search.toLowerCase())
-  );
+  const stats = useMemo(() => {
+    const active = users.filter(u => {
+      const e = activeEntitlement(u);
+      return Boolean(e) || ['active', 'trialing'].includes(u.subscription?.status || '');
+    }).length;
+    const paid = users.filter(u => ['active', 'trialing'].includes(u.subscription?.status || '')).length;
+    const pending = invitations.filter(i => i.status === 'pending').length;
+    return { total: users.length, active, paid, pending };
+  }, [users, invitations]);
 
-  const exportCSV = () => {
-    const rows = [
-      ['Email', 'Name', 'Created', 'Plan', 'Status', 'Period End'],
-      ...customers.map(c => [
-        c.email || '',
-        c.name || '',
-        fmtDate(c.created),
-        c.subscription?.plan || '',
-        c.subscription?.status || '',
-        c.subscription ? fmtDate(c.subscription.currentPeriodEnd) : '',
-      ]),
-    ];
-    const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `cyberlingo-customers-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setNotice('');
+    setWorking('invite');
+    try {
+      const cleanEmail = inviteEmail.trim().toLowerCase();
+      if (!cleanEmail.includes('@')) throw new Error('Skriv inn gyldig e-post');
+      if (fullName.trim().length < 2) throw new Error('Skriv inn navn');
+
+      const actualKind: GrantKind = period === 'lifetime' ? 'lifetime' : accessKind;
+      const endsAt = endsFromChoice(period, customDate);
+      await inviteUser({
+        email: cleanEmail,
+        fullName,
+        phone,
+        accessKind: actualKind,
+        endsAt,
+        note: note.trim() || undefined,
+      });
+
+      setNotice(`Tilgang er opprettet og innloggingslenke er sendt til ${cleanEmail}.`);
+      setFullName('');
+      setInviteEmail('');
+      setPhone('');
+      setNote('');
+      setPeriod('90');
+      await refresh();
+      setTab('users');
+    } catch (err: any) {
+      setError(err?.message || 'Kunne ikke opprette tilgang');
+    } finally {
+      setWorking(null);
+    }
+  };
+
+  const quickGrant = async (profile: AdminProfile, days: 30 | 90 | 365 | null) => {
+    setWorking(profile.id);
+    setError('');
+    setNotice('');
+    try {
+      const endsAt = days === null ? null : new Date(Date.now() + days * 86400_000).toISOString();
+      await grantAccess(profile.id, days === null ? 'lifetime' : 'manual', endsAt, 'Quick grant from Admin 2.0');
+      setNotice(`${profile.full_name || profile.email}: tilgang oppdatert.`);
+      await refresh();
+    } catch (err: any) {
+      setError(err?.message || 'Kunne ikke gi tilgang');
+    } finally {
+      setWorking(null);
+    }
+  };
+
+  const handleRevoke = async (profile: AdminProfile) => {
+    if (profile.email.toLowerCase() === 'freddy.bremseth@gmail.com') return;
+    setWorking(profile.id);
+    setError('');
+    setNotice('');
+    try {
+      await revokeAccess(profile.id);
+      setNotice(`${profile.full_name || profile.email}: gratis/manuell tilgang er stengt.`);
+      await refresh();
+    } catch (err: any) {
+      setError(err?.message || 'Kunne ikke stenge tilgang');
+    } finally {
+      setWorking(null);
+    }
   };
 
   return (
     <div className="space-y-5 animate-fadeIn">
-      {/* Header */}
       <div
         className="p-5 rounded-3xl"
         style={{
@@ -145,267 +195,282 @@ const AdminDashboard: React.FC<Props> = ({ user, onLogout, onApiKeySave, onLangC
           border: '1px solid rgba(249,115,22,0.2)',
         }}
       >
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--primary)' }}>
-              👑 Admin – Livstidsabonnement
+              👑 Admin 2.0
             </p>
-            <h2 className="text-2xl font-black mt-1">SaaS Kontrollpanel</h2>
-            <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-              {user.email}
-            </p>
+            <h2 className="text-2xl font-black mt-1">Brukere og tilgang</h2>
+            <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{user.email}</p>
           </div>
-          <a
-            href="https://dashboard.stripe.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-4 py-2 rounded-xl text-sm font-semibold"
-            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--secondary)' }}
+          <button
+            onClick={refresh}
+            disabled={loading}
+            className="px-3 py-2 rounded-xl text-sm font-semibold"
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
           >
-            Stripe ↗
-          </a>
+            {loading ? '↻' : '↻ Oppdater'}
+          </button>
         </div>
       </div>
 
-      {error && (
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          ['👥', 'Brukere', stats.total],
+          ['✅', 'Aktiv tilgang', stats.active],
+          ['💳', 'Betalende', stats.paid],
+          ['✉️', 'Ventende', stats.pending],
+        ].map(([icon, label, value]) => (
+          <div key={String(label)} className="p-4 rounded-2xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+            <p className="text-xl">{icon}</p>
+            <p className="text-2xl font-black mt-1">{value}</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{label}</p>
+          </div>
+        ))}
+      </div>
+
+      {(error || notice) && (
         <div
-          className="p-4 rounded-2xl"
-          style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)' }}
+          className="p-4 rounded-2xl text-sm"
+          style={{
+            background: error ? 'rgba(248,113,113,0.08)' : 'rgba(74,222,128,0.08)',
+            border: `1px solid ${error ? 'rgba(248,113,113,0.2)' : 'rgba(74,222,128,0.2)'}`,
+            color: error ? 'var(--danger)' : 'var(--success)',
+          }}
         >
-          <p className="text-sm font-semibold" style={{ color: 'var(--danger)' }}>⚠️ {error}</p>
+          {error || notice}
         </div>
       )}
 
-      {/* Tabs */}
       <div className="flex gap-2 overflow-x-auto">
         {([
-          { id: 'overview', label: '📊 Oversikt' },
-          { id: 'local', label: '📱 Registrerte' },
-        ] as const).map(t => (
+          ['users', '👥 Brukere'],
+          ['invite', '➕ Legg til'],
+          ['invitations', '✉️ Invitasjoner'],
+          ['system', '⚙️ System'],
+        ] as const).map(([id, label]) => (
           <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className="px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all"
+            key={id}
+            onClick={() => setTab(id)}
+            className="px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap"
             style={{
-              background: tab === t.id ? 'var(--primary)' : 'var(--bg-card)',
-              color: tab === t.id ? 'white' : 'var(--text-muted)',
-              border: `1px solid ${tab === t.id ? 'transparent' : 'var(--border)'}`,
+              background: tab === id ? 'var(--primary)' : 'var(--bg-card)',
+              color: tab === id ? 'white' : 'var(--text-muted)',
+              border: `1px solid ${tab === id ? 'transparent' : 'var(--border)'}`,
             }}
           >
-            {t.label}
+            {label}
           </button>
         ))}
       </div>
 
-      {/* Overview tab */}
-      {tab === 'overview' && !stats && (
-        <div
-          className="p-4 rounded-2xl"
-          style={{ background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.2)' }}
-        >
-          <p className="font-bold mb-1">🔒 Stripe-data er midlertidig skjult</p>
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            Det gamle admin-endepunktet er stengt fordi e-post i URL ikke er sikker autentisering.
-            Kunder og betalinger vises igjen her når den nye server-verifiserte admininnloggingen er aktiv.
-          </p>
-          <a
-            href="https://dashboard.stripe.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block mt-3 text-sm font-semibold"
-            style={{ color: 'var(--secondary)' }}
-          >
-            Åpne Stripe Dashboard ↗
-          </a>
-        </div>
-      )}
-
-      {tab === 'overview' && stats && (
-        <>
-          <div className="grid grid-cols-2 gap-3">
-            <StatCard icon="💰" label="MRR" value={`€${fmt(stats.mrr)}`} sub="Månedlig inntekt" color="var(--success)" />
-            <StatCard icon="📈" label="ARR" value={`€${fmt(stats.arr)}`} sub="Årlig inntekt" color="var(--secondary)" />
-            <StatCard icon="💵" label="Total inntekt" value={`€${fmt(stats.totalRevenue)}`} sub="All tid" />
-            <StatCard icon="📅" label="Siste 30 dager" value={`€${fmt(stats.last30DaysRevenue)}`} sub="Inntekt" color="var(--primary)" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <StatCard icon="👥" label="Kunder" value={String(stats.totalCustomers)} sub="Totalt registrert" />
-            <StatCard icon="✅" label="Aktive" value={String(stats.activeSubscriptions)} sub="Betalende" color="var(--success)" />
-            <StatCard icon="📆" label="Månedlig" value={String(stats.monthlySubscribers)} sub="€7.99/mnd" />
-            <StatCard icon="🎯" label="Årlig" value={String(stats.yearlySubscribers)} sub="€71.91/år" color="var(--primary)" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <StatCard icon="❌" label="Kansellerte" value={String(stats.canceledSubscriptions)} color="var(--danger)" />
-            <StatCard icon="📉" label="Churn" value={`${stats.churnRate}%`} sub="Kanselleringsrate" />
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={exportCSV}
-              className="flex-1 py-3 rounded-xl text-sm font-semibold"
-              style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
-            >
-              📥 Eksporter CSV
-            </button>
-            <a
-              href="https://dashboard.stripe.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 py-3 rounded-xl text-sm font-semibold text-center"
-              style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--secondary)' }}
-            >
-              🔗 Åpne Stripe Dashboard
-            </a>
-          </div>
-        </>
-      )}
-
-      {/* Customers tab */}
-      {tab === 'customers' && (
-        <>
+      {tab === 'users' && (
+        <div className="space-y-3">
           <input
             type="search"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Søk etter e-post eller navn..."
+            placeholder="Søk navn, e-post eller telefon..."
             className="app-input"
           />
-          <div className="space-y-2">
-            {filteredCustomers.length === 0 && (
-              <p className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
-                {loading ? 'Laster...' : 'Ingen kunder funnet'}
-              </p>
-            )}
-            {filteredCustomers.map(c => (
-              <div
-                key={c.id}
-                className="p-4 rounded-2xl"
-                style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-bold truncate">{c.name || c.email || 'Uten navn'}</p>
-                    <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{c.email}</p>
+
+          {filteredUsers.map(profile => {
+            const entitlement = activeEntitlement(profile);
+            const paid = ['active', 'trialing'].includes(profile.subscription?.status || '');
+            const isOwner = profile.email.toLowerCase() === 'freddy.bremseth@gmail.com';
+            return (
+              <div key={profile.id} className="p-4 rounded-2xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-bold truncate">{profile.full_name || profile.email}</p>
+                    <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{profile.email}</p>
+                    {profile.phone && <p className="text-xs mt-0.5" style={{ color: 'var(--text-faint)' }}>{profile.phone}</p>}
                   </div>
-                  {c.subscription && (
-                    <span
-                      className="px-2 py-1 rounded-full text-xs font-bold whitespace-nowrap ml-2"
-                      style={{
-                        background: c.subscription.status === 'active' ? 'rgba(16,185,129,0.15)' : 'rgba(251,191,36,0.15)',
-                        color: c.subscription.status === 'active' ? 'var(--success)' : 'var(--warning)',
-                      }}
-                    >
-                      {c.subscription.status}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center justify-between text-xs" style={{ color: 'var(--text-muted)' }}>
-                  <span>Opprettet {fmtDate(c.created)}</span>
-                  {c.subscription && (
-                    <span>
-                      {c.subscription.plan === 'yearly' ? '🎯 Årlig' : '📆 Månedlig'} · fornyes {fmtDate(c.subscription.currentPeriodEnd)}
-                      {c.subscription.cancelAtPeriodEnd && ' · kansellerer'}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      {/* Payments tab */}
-      {tab === 'payments' && (
-        <div className="space-y-2">
-          {charges.length === 0 && (
-            <p className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
-              {loading ? 'Laster...' : 'Ingen betalinger enda'}
-            </p>
-          )}
-          {charges.map(ch => (
-            <div
-              key={ch.id}
-              className="p-4 rounded-2xl flex items-center justify-between"
-              style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
-            >
-              <div className="min-w-0 flex-1">
-                <p className="font-bold">€{fmt(ch.amount)} {ch.currency.toUpperCase()}</p>
-                <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
-                  {ch.email} · {fmtDate(ch.created)}
-                </p>
-              </div>
-              <span
-                className="px-2 py-1 rounded-full text-xs font-bold whitespace-nowrap ml-2"
-                style={{
-                  background: ch.status === 'succeeded' ? 'rgba(16,185,129,0.15)' : 'rgba(248,113,113,0.15)',
-                  color: ch.status === 'succeeded' ? 'var(--success)' : 'var(--danger)',
-                }}
-              >
-                {ch.status}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Local users tab */}
-      {tab === 'local' && (
-        <>
-          <input
-            type="search"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Søk etter brukernavn eller e-post..."
-            className="app-input"
-          />
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            {filteredLocal.length} registrerte brukere på denne enheten · inkluderer gratis-prøver
-          </p>
-          <div className="space-y-2">
-            {filteredLocal.map(u => (
-              <div
-                key={u.username}
-                className="p-4 rounded-2xl"
-                style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <p className="font-bold">{u.username}</p>
                   <span
-                    className="px-2 py-1 rounded-full text-xs font-bold"
+                    className="px-2 py-1 rounded-full text-xs font-bold whitespace-nowrap"
                     style={{
-                      background: u.subscription.plan === 'trial' ? 'rgba(251,191,36,0.15)' :
-                        u.subscription.plan === 'monthly' || u.subscription.plan === 'yearly' || u.subscription.plan === 'lifetime' ? 'rgba(16,185,129,0.15)' :
-                          'rgba(148,163,184,0.15)',
-                      color: u.subscription.plan === 'trial' ? 'var(--warning)' :
-                        u.subscription.plan === 'monthly' || u.subscription.plan === 'yearly' || u.subscription.plan === 'lifetime' ? 'var(--success)' :
-                          'var(--text-muted)',
+                      background: (entitlement || paid) ? 'rgba(74,222,128,0.12)' : 'rgba(248,113,113,0.10)',
+                      color: (entitlement || paid) ? 'var(--success)' : 'var(--danger)',
                     }}
                   >
-                    {u.subscription.plan === 'lifetime' ? 'livstid' : u.subscription.plan}
+                    {paid
+                      ? `Betalt · ${profile.subscription?.plan || ''}`
+                      : entitlement
+                      ? kindLabel[entitlement.kind]
+                      : 'Ingen tilgang'}
                   </span>
                 </div>
-                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{u.email || '(ingen e-post)'}</p>
-                <div className="flex gap-4 mt-2 text-xs" style={{ color: 'var(--text-faint)' }}>
-                  <span>⚡ {u.xp} XP</span>
-                  <span>🔥 {u.streak} dager</span>
-                  <span>📚 {u.completedLessonIds?.length || 0} leksjoner</span>
-                  <span>💬 {u.conversationsCompleted || 0} samtaler</span>
+
+                <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
+                  <div className="p-2 rounded-xl" style={{ background: 'var(--bg)' }}>
+                    <span style={{ color: 'var(--text-faint)' }}>Tilgang til</span>
+                    <p className="font-semibold mt-0.5">
+                      {paid ? fmtDate(profile.subscription?.current_period_end) : entitlement ? fmtDate(entitlement.ends_at) : '—'}
+                    </p>
+                  </div>
+                  <div className="p-2 rounded-xl" style={{ background: 'var(--bg)' }}>
+                    <span style={{ color: 'var(--text-faint)' }}>AI-kostnad logget</span>
+                    <p className="font-semibold mt-0.5">€{Number(profile.aiCostEur || 0).toFixed(2)}</p>
+                  </div>
                 </div>
+
+                {!isOwner && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <button disabled={working === profile.id} onClick={() => quickGrant(profile, 30)} className="btn-secondary px-3 py-1.5 text-xs">30 dager</button>
+                    <button disabled={working === profile.id} onClick={() => quickGrant(profile, 90)} className="btn-secondary px-3 py-1.5 text-xs">90 dager</button>
+                    <button disabled={working === profile.id} onClick={() => quickGrant(profile, 365)} className="btn-secondary px-3 py-1.5 text-xs">1 år</button>
+                    <button disabled={working === profile.id} onClick={() => quickGrant(profile, null)} className="btn-secondary px-3 py-1.5 text-xs">Lifetime</button>
+                    <button
+                      disabled={working === profile.id}
+                      onClick={() => handleRevoke(profile)}
+                      className="px-3 py-1.5 rounded-xl text-xs font-semibold"
+                      style={{ background: 'rgba(248,113,113,0.08)', color: 'var(--danger)', border: '1px solid rgba(248,113,113,0.2)' }}
+                    >
+                      Steng gratis tilgang
+                    </button>
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
-        </>
+            );
+          })}
+
+          {!loading && filteredUsers.length === 0 && (
+            <p className="text-center py-8 text-sm" style={{ color: 'var(--text-muted)' }}>Ingen brukere funnet.</p>
+          )}
+        </div>
       )}
 
-      {/* Logout */}
-      <div className="pt-6">
-        <button
-          onClick={onLogout}
-          className="w-full py-3 rounded-xl text-sm font-bold"
-          style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', color: 'var(--danger)' }}
-        >
-          Logg ut
-        </button>
-      </div>
+      {tab === 'invite' && (
+        <form onSubmit={handleInvite} className="p-4 rounded-2xl space-y-4" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+          <div>
+            <h3 className="font-black text-lg">Legg til bruker</h3>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+              Opprett gratis/manuell tilgang og send sikker innloggingslenke.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Navn" className="app-input" />
+            <input value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} type="email" placeholder="E-post" className="app-input" />
+          </div>
+          <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Telefonnummer (valgfritt)" className="app-input" />
+
+          <div className="grid grid-cols-2 gap-3">
+            <label>
+              <span className="text-xs font-bold block mb-1" style={{ color: 'var(--text-muted)' }}>Tilgangstype</span>
+              <select value={accessKind} onChange={e => setAccessKind(e.target.value as GrantKind)} className="app-input">
+                <option value="family">Familie</option>
+                <option value="manual">Manuell</option>
+                <option value="partner">Partner</option>
+                <option value="promo">Promo</option>
+              </select>
+            </label>
+            <label>
+              <span className="text-xs font-bold block mb-1" style={{ color: 'var(--text-muted)' }}>Periode</span>
+              <select value={period} onChange={e => setPeriod(e.target.value as PeriodChoice)} className="app-input">
+                <option value="7">7 dager</option>
+                <option value="30">30 dager</option>
+                <option value="90">90 dager</option>
+                <option value="365">1 år</option>
+                <option value="custom">Egendefinert</option>
+                <option value="lifetime">Lifetime</option>
+              </select>
+            </label>
+          </div>
+
+          {period === 'custom' && (
+            <input type="date" value={customDate} onChange={e => setCustomDate(e.target.value)} className="app-input" />
+          )}
+
+          <textarea
+            value={note}
+            onChange={e => setNote(e.target.value)}
+            placeholder="Notat, f.eks. familie / testbruker / samarbeidspartner"
+            className="app-input min-h-20"
+          />
+
+          <button type="submit" disabled={working === 'invite'} className="btn-primary w-full py-3.5">
+            {working === 'invite' ? 'Oppretter...' : 'Opprett tilgang og send lenke'}
+          </button>
+        </form>
+      )}
+
+      {tab === 'invitations' && (
+        <div className="space-y-2">
+          {invitations.map(inv => (
+            <div key={inv.id} className="p-4 rounded-2xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+              <div className="flex justify-between gap-3">
+                <div>
+                  <p className="font-bold">{inv.full_name || inv.email}</p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{inv.email}</p>
+                  {inv.phone && <p className="text-xs" style={{ color: 'var(--text-faint)' }}>{inv.phone}</p>}
+                </div>
+                <span className="text-xs font-bold">{inv.status}</span>
+              </div>
+              <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
+                {kindLabel[inv.access_kind]} · til {fmtDate(inv.ends_at)}
+              </p>
+            </div>
+          ))}
+          {!loading && invitations.length === 0 && (
+            <p className="text-center py-8 text-sm" style={{ color: 'var(--text-muted)' }}>Ingen invitasjoner ennå.</p>
+          )}
+        </div>
+      )}
+
+      {tab === 'system' && (
+        <div className="space-y-3">
+          <div className="p-4 rounded-2xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+            <p className="font-bold mb-1">☁️ Cyberlingo Cloud</p>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              Brukere, tilgang og læringsprogresjon ligger nå i separat Supabase med RLS. LocalStorage brukes fortsatt som lokal cache.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+            <p className="font-bold mb-2">Stripe</p>
+            <p className="text-sm mb-3" style={{ color: 'var(--text-muted)' }}>
+              Betalingsdata administreres fortsatt i Stripe til webhook-synk er aktivert mot den nye kontobasen.
+            </p>
+            <a href="https://dashboard.stripe.com" target="_blank" rel="noopener noreferrer" className="btn-secondary inline-block px-4 py-2 text-sm">
+              Åpne Stripe Dashboard ↗
+            </a>
+          </div>
+
+          <div className="p-4 rounded-2xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+            <p className="font-bold mb-2">Forklaringsspråk</p>
+            <div className="flex flex-wrap gap-2">
+              {([
+                ['no', '🇳🇴 Norsk'],
+                ['en', '🇬🇧 English'],
+                ['de', '🇩🇪 Deutsch'],
+                ['ru', '🇷🇺 Русский'],
+              ] as [SourceLang, string][]).map(([lang, label]) => (
+                <button
+                  key={lang}
+                  onClick={() => onLangChange(lang)}
+                  className="px-3 py-2 rounded-xl text-xs font-semibold"
+                  style={{
+                    background: user.sourceLang === lang ? 'var(--primary)' : 'var(--bg)',
+                    color: user.sourceLang === lang ? 'white' : 'var(--text-muted)',
+                    border: '1px solid var(--border)',
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <button
+        onClick={onLogout}
+        className="w-full py-3 rounded-2xl text-sm font-bold"
+        style={{ background: 'rgba(248,113,113,0.08)', color: 'var(--danger)', border: '1px solid rgba(248,113,113,0.2)' }}
+      >
+        Logg ut
+      </button>
     </div>
   );
 };
