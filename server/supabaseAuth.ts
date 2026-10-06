@@ -8,13 +8,17 @@ export interface VerifiedSupabaseUser {
   email: string;
 }
 
-export const requireSupabaseUser = async (req: VercelRequest): Promise<VerifiedSupabaseUser> => {
+const getAuthorization = (req: VercelRequest): string => {
   const header = req.headers.authorization;
   const authorization = Array.isArray(header) ? header[0] : header;
-
   if (!authorization?.startsWith('Bearer ')) {
     throw Object.assign(new Error('Authentication required'), { statusCode: 401 });
   }
+  return authorization;
+};
+
+export const requireSupabaseUser = async (req: VercelRequest): Promise<VerifiedSupabaseUser> => {
+  const authorization = getAuthorization(req);
 
   const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
     headers: {
@@ -33,4 +37,32 @@ export const requireSupabaseUser = async (req: VercelRequest): Promise<VerifiedS
   }
 
   return { id: user.id, email: user.email.trim().toLowerCase() };
+};
+
+export const requireActiveAccess = async (req: VercelRequest): Promise<VerifiedSupabaseUser> => {
+  const authorization = getAuthorization(req);
+  const user = await requireSupabaseUser(req);
+
+  if (user.email === 'freddy.bremseth@gmail.com') return user;
+
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/has_active_access`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_PUBLISHABLE_KEY,
+      Authorization: authorization,
+      'Content-Type': 'application/json',
+    },
+    body: '{}',
+  });
+
+  if (!response.ok) {
+    throw Object.assign(new Error('Could not verify access'), { statusCode: 403 });
+  }
+
+  const active = await response.json();
+  if (active !== true) {
+    throw Object.assign(new Error('Active subscription or grant required'), { statusCode: 402 });
+  }
+
+  return user;
 };
