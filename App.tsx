@@ -433,11 +433,6 @@ const App: React.FC = () => {
   // ─── AI access check: only requested when an AI feature is used ─────────
   const checkAiAccess = useCallback((): boolean => {
     if (!user) return false;
-    const storedKey = localStorage.getItem('cyberlingo_api_key') || user.apiKey;
-    if (!storedKey) {
-      setNeedsApiKey(true);
-      return false;
-    }
     return checkSubscription();
   }, [user, checkSubscription]);
 
