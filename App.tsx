@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   UserProfile, SourceLang, AppTab, LearnMode, SpeakMode,
   Lesson, ACHIEVEMENTS, isSubscriptionActive, todayString,
-  getLevelFromXp, getTrialTasksLeft, ADMIN_EMAIL, TRIAL_FREE_TASKS,
+  getLevelFromXp, getTrialTasksLeft, TRIAL_FREE_TASKS,
   LIFETIME_USERNAME, createLifetimeSubscription, isLifetimeEmail,
 } from './types';
 import { INITIAL_LESSONS } from './data/lessons';
@@ -135,7 +135,7 @@ const App: React.FC = () => {
   // Call this before every AI-powered task. Returns false if trial exhausted.
   const useTrialTask = useCallback((): boolean => {
     if (!user) return false;
-    if (user.email === ADMIN_EMAIL) return true;
+    if (isLifetimeEmail(user.email)) return true;
     if (user.subscription.plan !== 'trial') return hasActiveAccess;
     const left = getTrialTasksLeft(user);
     if (left <= 0) {
