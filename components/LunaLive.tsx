@@ -73,7 +73,7 @@ const LunaLive: React.FC<LunaLiveProps> = ({ lang, onUseAiTask, allowed = false 
       drawVisualizer();
 
       const sessionPromise = ai.live.connect({
-        model: 'gemini-2.5-flash-native-audio-preview-12-2025',
+        model: 'gemini-3.8-live',
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
