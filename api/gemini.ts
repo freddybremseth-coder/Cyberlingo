@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI } from '@google/genai';
-import { requireSupabaseUser } from '../server/supabaseAuth';
+import { requireActiveAccess } from '../server/supabaseAuth';
 
 const ALLOWED_MODEL = 'gemini-3.6-flash';
 
@@ -8,7 +8,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    await requireSupabaseUser(req);
+    await requireActiveAccess(req);
 
     const providerKey = process.env.AI_PROVIDER_KEY;
     if (!providerKey) {
@@ -36,7 +36,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const status = Number(err?.statusCode) || 500;
     console.error('AI proxy error:', err);
     res.status(status).json({
-      error: status === 401 ? 'Authentication required' : 'AI request failed',
+      error: status === 401 ? 'Authentication required' : status === 402 ? 'Active access required' : 'AI request failed',
     });
   }
 }
