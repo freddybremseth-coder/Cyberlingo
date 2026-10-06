@@ -64,7 +64,7 @@ const AdminDashboard: React.FC<Props> = ({ user, onLogout, onApiKeySave, onLangC
   const [stats, setStats] = useState<Stats | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [charges, setCharges] = useState<Charge[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<'overview' | 'customers' | 'payments' | 'local'>('overview');
   const [search, setSearch] = useState('');
@@ -73,7 +73,6 @@ const AdminDashboard: React.FC<Props> = ({ user, onLogout, onApiKeySave, onLangC
   const [localUsers, setLocalUsers] = useState<UserProfile[]>([]);
 
   useEffect(() => {
-    fetchStats();
     loadLocalUsers();
   }, []);
 
@@ -156,14 +155,15 @@ const AdminDashboard: React.FC<Props> = ({ user, onLogout, onApiKeySave, onLangC
               {user.email}
             </p>
           </div>
-          <button
-            onClick={fetchStats}
-            disabled={loading}
+          <a
+            href="https://dashboard.stripe.com"
+            target="_blank"
+            rel="noopener noreferrer"
             className="px-4 py-2 rounded-xl text-sm font-semibold"
-            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--secondary)' }}
           >
-            {loading ? '↻ Laster...' : '↻ Oppdater'}
-          </button>
+            Stripe ↗
+          </a>
         </div>
       </div>
 
@@ -180,8 +180,6 @@ const AdminDashboard: React.FC<Props> = ({ user, onLogout, onApiKeySave, onLangC
       <div className="flex gap-2 overflow-x-auto">
         {([
           { id: 'overview', label: '📊 Oversikt' },
-          { id: 'customers', label: '👥 Kunder' },
-          { id: 'payments', label: '💳 Betalinger' },
           { id: 'local', label: '📱 Registrerte' },
         ] as const).map(t => (
           <button
@@ -200,6 +198,28 @@ const AdminDashboard: React.FC<Props> = ({ user, onLogout, onApiKeySave, onLangC
       </div>
 
       {/* Overview tab */}
+      {tab === 'overview' && !stats && (
+        <div
+          className="p-4 rounded-2xl"
+          style={{ background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.2)' }}
+        >
+          <p className="font-bold mb-1">🔒 Stripe-data er midlertidig skjult</p>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            Det gamle admin-endepunktet er stengt fordi e-post i URL ikke er sikker autentisering.
+            Kunder og betalinger vises igjen her når den nye server-verifiserte admininnloggingen er aktiv.
+          </p>
+          <a
+            href="https://dashboard.stripe.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block mt-3 text-sm font-semibold"
+            style={{ color: 'var(--secondary)' }}
+          >
+            Åpne Stripe Dashboard ↗
+          </a>
+        </div>
+      )}
+
       {tab === 'overview' && stats && (
         <>
           <div className="grid grid-cols-2 gap-3">
