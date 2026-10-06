@@ -77,14 +77,14 @@ const SettingsScreen: React.FC<Props> = ({ user, onLogout, onApiKeySave, onSubsc
   const hasPremiumAccess = isLifetime || isStripePaid;
 
   const handleManageSubscription = async () => {
-    const customerId = user.subscription.stripeCustomerId;
-    if (!customerId) return;
+    const sessionId = user.subscription.stripeCheckoutSessionId;
+    if (!sessionId) return;
     setPortalLoading(true);
     try {
       const res = await fetch('/api/create-portal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customerId, returnUrl: window.location.origin }),
+        body: JSON.stringify({ sessionId }),
       });
       const data = await res.json();
       if (data.url) window.location.href = data.url;
@@ -180,7 +180,7 @@ const SettingsScreen: React.FC<Props> = ({ user, onLogout, onApiKeySave, onSubsc
             )}
           </div>
 
-          {isStripePaid && user.subscription.stripeCustomerId ? (
+          {isStripePaid && user.subscription.stripeCheckoutSessionId ? (
             <button
               onClick={handleManageSubscription}
               disabled={portalLoading}

@@ -10,6 +10,7 @@ export interface SubscriptionStatus {
   subscribedDate: number | null;
   expiresAt: number | null;
   stripeCustomerId?: string;
+  stripeCheckoutSessionId?: string;
   stripeSubscriptionId?: string;
   currentPeriodEnd?: number;
   stripeStatus?: 'active' | 'trialing' | 'past_due' | 'canceled' | 'incomplete' | 'unpaid';

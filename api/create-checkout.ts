@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+const APP_URL = process.env.APP_URL || 'https://spanish.chatgenius.pro';
 
 const PRICES = {
   monthly: process.env.STRIPE_PRICE_MONTHLY!,
@@ -11,18 +12,17 @@ const PRICES = {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { plan, returnUrl } = req.body as { plan: 'monthly' | 'yearly'; returnUrl: string };
+  const { plan } = req.body as { plan: 'monthly' | 'yearly' };
 
   if (!plan || !PRICES[plan]) return res.status(400).json({ error: 'Invalid plan' });
-  if (!returnUrl) return res.status(400).json({ error: 'Missing returnUrl' });
 
   try {
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [{ price: PRICES[plan], quantity: 1 }],
-      success_url: `${returnUrl}?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${returnUrl}?cancelled=true`,
+      success_url: `${APP_URL}?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${APP_URL}?cancelled=true`,
       allow_promotion_codes: true,
       subscription_data: {
         metadata: { plan },
@@ -32,6 +32,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.json({ url: session.url });
   } catch (err: any) {
     console.error('Stripe checkout error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Checkout failed' });
   }
 }
