@@ -10,6 +10,7 @@ import {
   listAdminUsers,
   revokeAccess,
 } from '../services/accountService';
+import { supabase } from '../services/supabaseClient';
 
 interface Props {
   user: UserProfile;
@@ -20,6 +21,32 @@ interface Props {
 
 type GrantKind = Exclude<AccessKind, 'trial' | 'paid'>;
 type PeriodChoice = '7' | '30' | '90' | '365' | 'custom' | 'lifetime';
+
+interface StripeCustomerRow {
+  id: string;
+  email: string | null;
+  name: string | null;
+  created: number;
+  subscription: {
+    id: string;
+    status: string;
+    interval: string | null;
+    unitAmount: number;
+    currency: string;
+    currentPeriodEnd: number;
+    cancelAtPeriodEnd: boolean;
+  } | null;
+}
+
+interface StripeAdminStats {
+  totalCustomers: number;
+  activeSubscriptions: number;
+  canceledSubscriptions: number;
+  mrr: number;
+  arr: number;
+  totalRevenue: number;
+  last30DaysRevenue: number;
+}
 
 const fmtDate = (iso?: string | null) =>
   iso
@@ -65,7 +92,9 @@ const kindLabel: Record<string, string> = {
 const AdminDashboard: React.FC<Props> = ({ user, onLogout, onLangChange }) => {
   const [users, setUsers] = useState<AdminProfile[]>([]);
   const [invitations, setInvitations] = useState<AdminInvitation[]>([]);
-  const [tab, setTab] = useState<'users' | 'invite' | 'invitations' | 'system'>('users');
+  const [stripeCustomers, setStripeCustomers] = useState<StripeCustomerRow[]>([]);
+  const [stripeStats, setStripeStats] = useState<StripeAdminStats | null>(null);
+  const [tab, setTab] = useState<'users' | 'invite' | 'invitations' | 'stripe' | 'system'>('users');
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -84,9 +113,25 @@ const AdminDashboard: React.FC<Props> = ({ user, onLogout, onLangChange }) => {
     setLoading(true);
     setError('');
     try {
-      const [userRows, inviteRows] = await Promise.all([listAdminUsers(), listAdminInvitations()]);
+      const [userRows, inviteRows, sessionResult] = await Promise.all([
+        listAdminUsers(),
+        listAdminInvitations(),
+        supabase.auth.getSession(),
+      ]);
       setUsers(userRows);
       setInvitations(inviteRows);
+
+      const token = sessionResult.data.session?.access_token;
+      if (token) {
+        const response = await fetch('/api/admin-stats', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const stripeData = await response.json();
+        if (response.ok) {
+          setStripeStats(stripeData.stats);
+          setStripeCustomers(stripeData.customers || []);
+        }
+      }
     } catch (err: any) {
       setError(err?.message || 'Kunne ikke hente admin-data');
     } finally {
@@ -108,15 +153,24 @@ const AdminDashboard: React.FC<Props> = ({ user, onLogout, onLangChange }) => {
     );
   }, [users, search]);
 
+  const stripeByEmail = useMemo(() => {
+    const map = new Map<string, StripeCustomerRow>();
+    stripeCustomers.forEach(c => {
+      if (c.email) map.set(c.email.trim().toLowerCase(), c);
+    });
+    return map;
+  }, [stripeCustomers]);
+
   const stats = useMemo(() => {
     const active = users.filter(u => {
       const e = activeEntitlement(u);
-      return Boolean(e) || ['active', 'trialing'].includes(u.subscription?.status || '');
+      const stripe = stripeByEmail.get(u.email.toLowerCase());
+      return Boolean(e) || ['active', 'trialing'].includes(stripe?.subscription?.status || '');
     }).length;
-    const paid = users.filter(u => ['active', 'trialing'].includes(u.subscription?.status || '')).length;
+    const paid = stripeStats?.activeSubscriptions ?? 0;
     const pending = invitations.filter(i => i.status === 'pending').length;
     return { total: users.length, active, paid, pending };
-  }, [users, invitations]);
+  }, [users, invitations, stripeByEmail, stripeStats]);
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -247,6 +301,7 @@ const AdminDashboard: React.FC<Props> = ({ user, onLogout, onLangChange }) => {
           ['users', '👥 Brukere'],
           ['invite', '➕ Legg til'],
           ['invitations', '✉️ Invitasjoner'],
+          ['stripe', '💳 Abonnement'],
           ['system', '⚙️ System'],
         ] as const).map(([id, label]) => (
           <button
@@ -276,7 +331,9 @@ const AdminDashboard: React.FC<Props> = ({ user, onLogout, onLangChange }) => {
 
           {filteredUsers.map(profile => {
             const entitlement = activeEntitlement(profile);
-            const paid = ['active', 'trialing'].includes(profile.subscription?.status || '');
+            const stripeCustomer = stripeByEmail.get(profile.email.toLowerCase());
+            const stripeSubscription = stripeCustomer?.subscription;
+            const paid = ['active', 'trialing'].includes(stripeSubscription?.status || '');
             const isOwner = profile.email.toLowerCase() === 'freddy.bremseth@gmail.com';
             return (
               <div key={profile.id} className="p-4 rounded-2xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
@@ -294,7 +351,7 @@ const AdminDashboard: React.FC<Props> = ({ user, onLogout, onLangChange }) => {
                     }}
                   >
                     {paid
-                      ? `Betalt · ${profile.subscription?.plan || ''}`
+                      ? `Betalt · ${stripeSubscription?.interval === 'year' ? 'årlig' : 'månedlig'}`
                       : entitlement
                       ? kindLabel[entitlement.kind]
                       : 'Ingen tilgang'}
@@ -305,7 +362,7 @@ const AdminDashboard: React.FC<Props> = ({ user, onLogout, onLangChange }) => {
                   <div className="p-2 rounded-xl" style={{ background: 'var(--bg)' }}>
                     <span style={{ color: 'var(--text-faint)' }}>Tilgang til</span>
                     <p className="font-semibold mt-0.5">
-                      {paid ? fmtDate(profile.subscription?.current_period_end) : entitlement ? fmtDate(entitlement.ends_at) : '—'}
+                      {paid && stripeSubscription ? new Date(stripeSubscription.currentPeriodEnd).toLocaleDateString('nb-NO') : entitlement ? fmtDate(entitlement.ends_at) : '—'}
                     </p>
                   </div>
                   <div className="p-2 rounded-xl" style={{ background: 'var(--bg)' }}>
@@ -415,6 +472,79 @@ const AdminDashboard: React.FC<Props> = ({ user, onLogout, onLangChange }) => {
           {!loading && invitations.length === 0 && (
             <p className="text-center py-8 text-sm" style={{ color: 'var(--text-muted)' }}>Ingen invitasjoner ennå.</p>
           )}
+        </div>
+      )}
+
+      {tab === 'stripe' && (
+        <div className="space-y-3">
+          {stripeStats && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-4 rounded-2xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>MRR</p>
+                <p className="text-2xl font-black mt-1">€{stripeStats.mrr.toFixed(2)}</p>
+              </div>
+              <div className="p-4 rounded-2xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>ARR</p>
+                <p className="text-2xl font-black mt-1">€{stripeStats.arr.toFixed(2)}</p>
+              </div>
+              <div className="p-4 rounded-2xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Aktive abonnement</p>
+                <p className="text-2xl font-black mt-1">{stripeStats.activeSubscriptions}</p>
+              </div>
+              <div className="p-4 rounded-2xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Siste 30 dager</p>
+                <p className="text-2xl font-black mt-1">€{stripeStats.last30DaysRevenue.toFixed(2)}</p>
+              </div>
+            </div>
+          )}
+
+          {stripeCustomers.map(customer => (
+            <div key={customer.id} className="p-4 rounded-2xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-bold truncate">{customer.name || customer.email || 'Stripe-kunde'}</p>
+                  <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{customer.email || 'Ingen e-post'}</p>
+                </div>
+                <span
+                  className="px-2 py-1 rounded-full text-xs font-bold"
+                  style={{
+                    background: ['active', 'trialing'].includes(customer.subscription?.status || '')
+                      ? 'rgba(74,222,128,0.12)'
+                      : 'rgba(251,191,36,0.12)',
+                    color: ['active', 'trialing'].includes(customer.subscription?.status || '')
+                      ? 'var(--success)'
+                      : 'var(--warning)',
+                  }}
+                >
+                  {customer.subscription?.status || 'uten abonnement'}
+                </span>
+              </div>
+              {customer.subscription && (
+                <div className="flex justify-between text-xs mt-3" style={{ color: 'var(--text-muted)' }}>
+                  <span>
+                    €{customer.subscription.unitAmount.toFixed(2)} / {customer.subscription.interval === 'year' ? 'år' : 'måned'}
+                  </span>
+                  <span>
+                    {customer.subscription.cancelAtPeriodEnd ? 'Avsluttes ' : 'Fornyes '}
+                    {new Date(customer.subscription.currentPeriodEnd).toLocaleDateString('nb-NO')}
+                  </span>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {stripeCustomers.length === 0 && !loading && (
+            <p className="text-center py-8 text-sm" style={{ color: 'var(--text-muted)' }}>Ingen Stripe-kunder funnet.</p>
+          )}
+
+          <a
+            href="https://dashboard.stripe.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-secondary block text-center w-full py-3 text-sm"
+          >
+            Åpne Stripe Dashboard ↗
+          </a>
         </div>
       )}
 
