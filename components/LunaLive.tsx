@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
 import { SourceLang } from '../types';
-import { getStoredApiKey, detectProvider } from '../services/geminiService';
+import { getLocalApiKey, detectProvider } from '../services/geminiService';
 import NeonButton from './NeonButton';
 
 interface LunaLiveProps {
@@ -56,7 +56,12 @@ const LunaLive: React.FC<LunaLiveProps> = ({ lang, onUseAiTask, allowed = false 
     if (onUseAiTask && !onUseAiTask()) return;
     try {
       setError(null);
-      const ai = new GoogleGenAI({ apiKey: getStoredApiKey() });
+      const localKey = getLocalApiKey();
+      if (!localKey || detectProvider(localKey) !== 'gemini') {
+        setError('Luna Live krever en personlig Gemini-nøkkel på eierkontoen.');
+        return;
+      }
+      const ai = new GoogleGenAI({ apiKey: localKey });
       
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
       const inputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
