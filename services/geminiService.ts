@@ -1,5 +1,7 @@
-import { GoogleGenAI, Type, Modality } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { SourceLang } from "../types";
+
+const GEMINI_TEXT_MODEL = 'gemini-3.6-flash';
 
 // ─── Provider detection ────────────────────────────────────────────────────
 export type AIProvider = 'gemini' | 'claude' | 'openai';
@@ -78,7 +80,7 @@ const callText = async (systemPrompt: string, userPrompt: string, temp = 0.7): P
 
   if (provider === 'gemini') {
     const resp = await getAI().models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: GEMINI_TEXT_MODEL,
       contents: userPrompt,
       config: { temperature: temp, systemInstruction: systemPrompt },
     });
@@ -143,42 +145,6 @@ const callJSON = async (systemPrompt: string, userPrompt: string): Promise<strin
   return stripJSON(data.choices[0].message.content);
 };
 
-// ─── Audio helpers ─────────────────────────────────────────────────────────
-let sharedAudioContext: AudioContext | null = null;
-
-const getAudioContext = (): AudioContext => {
-  if (!sharedAudioContext) {
-    sharedAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-  }
-  return sharedAudioContext;
-};
-
-const decode = (base64: string): Uint8Array => {
-  const binaryString = atob(base64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-  return bytes;
-};
-
-const decodeAudioData = async (
-  data: Uint8Array,
-  ctx: AudioContext,
-  sampleRate: number,
-  numChannels: number,
-): Promise<AudioBuffer> => {
-  const arrayBuffer = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
-  const dataInt16 = new Int16Array(arrayBuffer);
-  const frameCount = dataInt16.length / numChannels;
-  const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
-  for (let channel = 0; channel < numChannels; channel++) {
-    const channelData = buffer.getChannelData(channel);
-    for (let i = 0; i < frameCount; i++) {
-      channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
-    }
-  }
-  return buffer;
-};
-
 // ─── Validate API key ──────────────────────────────────────────────────────
 export const validateApiKey = async (key: string): Promise<boolean> => {
   try {
@@ -214,43 +180,20 @@ export const validateApiKey = async (key: string): Promise<boolean> => {
 
 // ─── Text-to-Speech ────────────────────────────────────────────────────────
 export const generateSpeech = async (text: string): Promise<void> => {
-  const key = getStoredApiKey();
-  const provider = detectProvider(key);
+  // Pronunciation playback is intentionally local/browser-based.
+  // This keeps ordinary users free of voice-model costs; Luna Live remains owner-only.
+  if (!('speechSynthesis' in window)) return;
 
-  if (provider !== 'gemini') {
-    // Fallback: browser Web Speech API
-    if ('speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'es-ES';
-      utterance.rate = 0.85;
-      window.speechSynthesis.speak(utterance);
-    }
-    return;
-  }
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'es-ES';
+  utterance.rate = 0.85;
 
-  try {
-    const response = await getAI().models.generateContent({
-      model: 'gemini-2.5-flash-preview-tts',
-      contents: [{ parts: [{ text: `Say clearly and naturally in Spanish: ${text}` }] }],
-      config: {
-        responseModalities: [Modality.AUDIO],
-        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
-      },
-    });
+  const voices = window.speechSynthesis.getVoices();
+  const spanishVoice = voices.find(v => /^es(-|_)/i.test(v.lang));
+  if (spanishVoice) utterance.voice = spanishVoice;
 
-    const audioPart = response.candidates?.[0]?.content?.parts.find(p => p.inlineData?.data);
-    if (audioPart?.inlineData?.data) {
-      const audioCtx = getAudioContext();
-      if (audioCtx.state === 'suspended') await audioCtx.resume();
-      const audioBuffer = await decodeAudioData(decode(audioPart.inlineData.data), audioCtx, 24000, 1);
-      const source = audioCtx.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(audioCtx.destination);
-      source.start();
-    }
-  } catch (error) {
-    console.error('TTS failed:', error);
-  }
+  window.speechSynthesis.speak(utterance);
 };
 
 // ─── Vision / camera ───────────────────────────────────────────────────────
@@ -262,7 +205,7 @@ export const analyzeVision = async (base64Image: string, lang: SourceLang = 'no'
 
   if (provider === 'gemini') {
     const response = await getAI().models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: GEMINI_TEXT_MODEL,
       contents: {
         parts: [
           { inlineData: { data: base64Image, mimeType: 'image/jpeg' } },
@@ -342,7 +285,7 @@ export const analyzeSentence = async (sentence: string, lang: SourceLang = 'no')
 
   if (provider === 'gemini') {
     const response = await getAI().models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: GEMINI_TEXT_MODEL,
       contents: `Analyze this Spanish sentence: "${sentence}". Break it into individual words with their grammatical role.`,
       config: {
         responseMimeType: 'application/json',
@@ -385,7 +328,7 @@ export const generateQuiz = async (topic: string, count = 5, level = 1, lang: So
 
   if (provider === 'gemini') {
     const response = await getAI().models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: GEMINI_TEXT_MODEL,
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -423,7 +366,7 @@ export const getVerbDetails = async (verb: string, lang: SourceLang = 'no') => {
 
   if (provider === 'gemini') {
     const response = await getAI().models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: GEMINI_TEXT_MODEL,
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -470,7 +413,7 @@ export const getVerbSentenceExamples = async (verb: string, lang: SourceLang = '
 
   if (provider === 'gemini') {
     const response = await getAI().models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: GEMINI_TEXT_MODEL,
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -505,7 +448,7 @@ export const getVocabBatch = async (category: string, lang: SourceLang = 'no') =
 
   if (provider === 'gemini') {
     const response = await getAI().models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: GEMINI_TEXT_MODEL,
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -542,7 +485,7 @@ export const getPhraseBatch = async (category: string, lang: SourceLang = 'no') 
 
   if (provider === 'gemini') {
     const response = await getAI().models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: GEMINI_TEXT_MODEL,
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -592,7 +535,7 @@ Keep your response to 2-3 sentences maximum. Be encouraging.`;
       { role: 'user' as const, parts: [{ text: userMessage }] },
     ];
     const response = await getAI().models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: GEMINI_TEXT_MODEL,
       contents,
       config: { temperature: 0.85, systemInstruction },
     });
@@ -653,7 +596,7 @@ export const getDailyWord = async (lang: SourceLang = 'no'): Promise<{
 
   if (provider === 'gemini') {
     const response = await getAI().models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: GEMINI_TEXT_MODEL,
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
