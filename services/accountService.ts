@@ -181,7 +181,7 @@ export const sendMagicLink = async (
     email: cleanEmail,
     options: {
       shouldCreateUser: true,
-      emailRedirectTo: window.location.origin,
+      emailRedirectTo: 'https://spanish.chatgenius.pro',
       data: {
         full_name: fullName.trim(),
         source_lang: sourceLang,
