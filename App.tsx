@@ -168,6 +168,7 @@ const App: React.FC = () => {
                   plan: data.plan,
                   subscribedDate: Date.now(),
                   stripeCustomerId: data.customerId,
+                  stripeCheckoutSessionId: sessionId,
                   stripeSubscriptionId: data.subscriptionId,
                   stripeStatus: data.status,
                   currentPeriodEnd: data.currentPeriodEnd,
