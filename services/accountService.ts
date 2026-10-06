@@ -122,10 +122,6 @@ const subscriptionFromCloud = (
   stripe: any | null,
   existing: UserProfile['subscription'],
 ): UserProfile['subscription'] => {
-  if (isLifetimeEmail(existing ? undefined : undefined)) {
-    return existing;
-  }
-
   if (stripe && ['active', 'trialing'].includes(stripe.status)) {
     return {
       ...existing,
@@ -145,7 +141,7 @@ const subscriptionFromCloud = (
   }
 
   if (entitlement.kind === 'lifetime') {
-    return createLifetimeSubscription(existing);
+    return { ...createLifetimeSubscription(existing), accessKind: 'lifetime' } as any;
   }
 
   const start = new Date(entitlement.starts_at).getTime();
@@ -159,17 +155,19 @@ const subscriptionFromCloud = (
       subscribedDate: null,
       expiresAt: end,
       accessKind: 'trial',
-    };
+    } as any;
   }
 
   return {
     ...existing,
-    plan: 'complimentary',
+    plan: 'monthly',
     trialStartDate: existing.trialStartDate || start,
     subscribedDate: start,
     expiresAt: end,
+    currentPeriodEnd: end || undefined,
+    stripeStatus: 'active',
     accessKind: entitlement.kind,
-  };
+  } as any;
 };
 
 export const sendMagicLink = async (
