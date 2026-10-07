@@ -20,7 +20,7 @@ export const getLocalApiKey = (): string =>
   localStorage.getItem('cyberlingo_api_key') || '';
 
 export const getStoredApiKey = (): string =>
-  getLocalApiKey() || SERVER_GEMINI;
+  SERVER_GEMINI;
 
 export const setStoredApiKey = (key: string): void =>
   localStorage.setItem('cyberlingo_api_key', key);
