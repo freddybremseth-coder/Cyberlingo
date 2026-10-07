@@ -386,8 +386,8 @@ export const isSubscriptionActive = (sub: SubscriptionStatus, email?: string): b
     return sub.expiresAt === null || sub.expiresAt === undefined || Date.now() < sub.expiresAt;
   }
   if (sub.plan === 'monthly' || sub.plan === 'yearly') {
-    if (sub.stripeStatus && !['active', 'trialing', 'past_due'].includes(sub.stripeStatus)) return false;
-    if (sub.currentPeriodEnd) return Date.now() < sub.currentPeriodEnd || sub.accessStatus === 'grace';
+    if (sub.accessStatus === 'grace' && sub.stripeStatus === 'past_due') return true;
+    if (sub.stripeStatus && !['active', 'trialing'].includes(sub.stripeStatus)) return false;
     return sub.accessStatus !== 'suspended';
   }
   return false;
