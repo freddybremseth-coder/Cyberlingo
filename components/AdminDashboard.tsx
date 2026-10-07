@@ -1,6 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { UserProfile, SourceLang } from '../types';
-import { setStoredApiKey, clearStoredApiKey, validateApiKey, detectProvider } from '../services/geminiService';
+import React, { useEffect, useMemo, useState } from 'react';
+import { SourceLang, UserProfile } from '../types';
+import {
+  grantAdminAccess,
+  loadAdminSnapshot,
+  revokeAdminAccess,
+  sendMagicLink,
+} from '../services/platformClient';
 
 interface Props {
   user: UserProfile;
@@ -9,135 +14,189 @@ interface Props {
   onLangChange: (lang: SourceLang) => void;
 }
 
-interface Stats {
-  totalCustomers: number;
-  activeSubscriptions: number;
-  monthlySubscribers: number;
-  yearlySubscribers: number;
-  canceledSubscriptions: number;
-  mrr: number;
-  arr: number;
-  totalRevenue: number;
-  last30DaysRevenue: number;
-  churnRate: number;
-}
+type AccessKind = 'manual' | 'family' | 'partner' | 'promo' | 'lifetime';
+type Period = '7' | '30' | '90' | '365' | 'custom' | 'lifetime';
 
-interface Customer {
-  id: string;
-  email: string | null;
-  name: string | null;
-  created: number;
-  subscription: {
-    id: string;
-    status: string;
-    plan: 'monthly' | 'yearly';
-    currentPeriodEnd: number;
-    cancelAtPeriodEnd: boolean;
-  } | null;
-}
+type AdminUser = {
+  user_id: string;
+  email: string;
+  full_name: string | null;
+  phone: string | null;
+  status: string | null;
+  provider: string | null;
+  access_status: string | null;
+  access_kind: string | null;
+  billing_cycle: string | null;
+  ends_at: string | null;
+  usage?: {
+    ai_requests?: number | string;
+    estimated_cost_usd?: number | string;
+  };
+};
 
-interface Charge {
+type Invitation = {
   id: string;
-  amount: number;
-  currency: string;
+  email: string;
+  full_name: string | null;
+  phone: string | null;
+  access_kind: string;
+  ends_at: string | null;
   status: string;
-  email: string | null;
-  created: number;
-  description: string | null;
-}
+};
 
-const StatCard: React.FC<{ icon: string; label: string; value: string; sub?: string; color?: string }> = ({ icon, label, value, sub, color }) => (
-  <div
-    className="p-5 rounded-2xl"
-    style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
-  >
-    <div className="flex items-center justify-between mb-2">
-      <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{label}</span>
-      <span className="text-xl">{icon}</span>
-    </div>
-    <p className="text-3xl font-black" style={{ color: color || 'var(--text)' }}>{value}</p>
-    {sub && <p className="text-xs mt-1" style={{ color: 'var(--text-faint)' }}>{sub}</p>}
-  </div>
-);
+type Snapshot = {
+  stats: {
+    users: number;
+    active: number;
+    paid: number;
+    pending_invitations: number;
+    estimated_ai_cost_usd?: number | string;
+  };
+  users: AdminUser[];
+  invitations: Invitation[];
+};
+
+const fmtDate = (value?: string | null) =>
+  value ? new Date(value).toLocaleDateString('nb-NO') : 'Ubegrenset';
+
+function calculateEnd(period: Period, customDate: string) {
+  if (period === 'lifetime') return null;
+  if (period === 'custom') {
+    if (!customDate) throw new Error('Velg sluttdato.');
+    const date = new Date(customDate + 'T23:59:59');
+    if (date.getTime() <= Date.now()) throw new Error('Sluttdato må være i fremtiden.');
+    return date.toISOString();
+  }
+  return new Date(Date.now() + Number(period) * 86400_000).toISOString();
+}
 
 const AdminDashboard: React.FC<Props> = ({ user, onLogout, onApiKeySave, onLangChange }) => {
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [charges, setCharges] = useState<Charge[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<'overview' | 'customers' | 'payments' | 'local'>('overview');
+  const [data, setData] = useState<Snapshot | null>(null);
+  const [tab, setTab] = useState<'users' | 'add' | 'invitations' | 'system'>('users');
   const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [working, setWorking] = useState('');
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
 
-  // Local users (from localStorage) - registered but not necessarily paying
-  const [localUsers, setLocalUsers] = useState<UserProfile[]>([]);
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [accessKind, setAccessKind] = useState<AccessKind>('family');
+  const [period, setPeriod] = useState<Period>('90');
+  const [customDate, setCustomDate] = useState('');
+  const [note, setNote] = useState('');
 
-  useEffect(() => {
-    loadLocalUsers();
-  }, []);
+  const [lunaKey, setLunaKey] = useState('');
+  const [lunaSaved, setLunaSaved] = useState(false);
 
-  const loadLocalUsers = () => {
-    const users = JSON.parse(localStorage.getItem('cyberlingo_users') || '{}');
-    setLocalUsers(Object.values(users));
-  };
-
-  const fetchStats = async () => {
+  const refresh = async () => {
     setLoading(true);
-    setError(null);
+    setError('');
     try {
-      const res = await fetch(`/api/admin-stats?email=${encodeURIComponent(user.email)}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to load');
-      setStats(data.stats);
-      setCustomers(data.customers);
-      setCharges(data.recentCharges);
+      setData(await loadAdminSnapshot());
     } catch (err: any) {
-      setError(err.message);
+      setError(err?.message || 'Kunne ikke hente Admin 2.0.');
     } finally {
       setLoading(false);
     }
   };
 
-  const fmt = (n: number) => n.toLocaleString('nb-NO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const fmtDate = (ts: number) => new Date(ts).toLocaleDateString('nb-NO', { day: '2-digit', month: 'short', year: 'numeric' });
+  useEffect(() => {
+    refresh();
+  }, []);
 
-  const filteredCustomers = customers.filter(c =>
-    !search ||
-    c.email?.toLowerCase().includes(search.toLowerCase()) ||
-    c.name?.toLowerCase().includes(search.toLowerCase())
-  );
+  const users = data?.users || [];
+  const invitations = data?.invitations || [];
 
-  const filteredLocal = localUsers.filter(u =>
-    !search ||
-    u.email?.toLowerCase().includes(search.toLowerCase()) ||
-    u.username?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter(item =>
+      item.email.toLowerCase().includes(q) ||
+      (item.full_name || '').toLowerCase().includes(q) ||
+      (item.phone || '').toLowerCase().includes(q)
+    );
+  }, [users, search]);
 
-  const exportCSV = () => {
-    const rows = [
-      ['Email', 'Name', 'Created', 'Plan', 'Status', 'Period End'],
-      ...customers.map(c => [
-        c.email || '',
-        c.name || '',
-        fmtDate(c.created),
-        c.subscription?.plan || '',
-        c.subscription?.status || '',
-        c.subscription ? fmtDate(c.subscription.currentPeriodEnd) : '',
-      ]),
-    ];
-    const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `cyberlingo-customers-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const quickGrant = async (target: AdminUser, days: 30 | 90 | 365 | null) => {
+    setWorking(target.user_id);
+    setError('');
+    setNotice('');
+    try {
+      await grantAdminAccess({
+        email: target.email,
+        full_name: target.full_name || target.email.split('@')[0],
+        phone: target.phone || undefined,
+        access_kind: days === null ? 'lifetime' : 'manual',
+        ends_at: days === null ? null : new Date(Date.now() + days * 86400_000).toISOString(),
+        note: 'Hurtigtilgang fra Spanish Admin 2.0',
+      });
+      setNotice('Tilgangen til ' + target.email + ' er oppdatert.');
+      await refresh();
+    } catch (err: any) {
+      setError(err?.message || 'Kunne ikke oppdatere tilgang.');
+    } finally {
+      setWorking('');
+    }
+  };
+
+  const revoke = async (target: AdminUser) => {
+    setWorking(target.user_id);
+    setError('');
+    setNotice('');
+    try {
+      await revokeAdminAccess(target.user_id);
+      setNotice('Tilgangen til ' + target.email + ' er stengt.');
+      await refresh();
+    } catch (err: any) {
+      setError(err?.message || 'Kunne ikke stenge tilgang.');
+    } finally {
+      setWorking('');
+    }
+  };
+
+  const addUser = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setWorking('add');
+    setError('');
+    setNotice('');
+    try {
+      const cleanEmail = email.trim().toLowerCase();
+      if (!cleanEmail.includes('@')) throw new Error('Skriv inn en gyldig e-post.');
+      if (fullName.trim().length < 2) throw new Error('Skriv inn navn.');
+
+      const actualKind: AccessKind = period === 'lifetime' ? 'lifetime' : accessKind;
+      const endsAt = calculateEnd(period, customDate);
+
+      await grantAdminAccess({
+        email: cleanEmail,
+        full_name: fullName.trim(),
+        phone: phone.trim() || undefined,
+        access_kind: actualKind,
+        ends_at: endsAt,
+        note: note.trim() || undefined,
+      });
+
+      await sendMagicLink(cleanEmail, fullName.trim(), 'no', phone.trim() || undefined);
+
+      setNotice('Tilgang opprettet og innloggingslenke sendt til ' + cleanEmail + '.');
+      setFullName('');
+      setEmail('');
+      setPhone('');
+      setNote('');
+      setPeriod('90');
+      await refresh();
+      setTab('users');
+    } catch (err: any) {
+      setError(err?.message || 'Kunne ikke legge til bruker.');
+    } finally {
+      setWorking('');
+    }
   };
 
   return (
     <div className="space-y-5 animate-fadeIn">
-      {/* Header */}
       <div
         className="p-5 rounded-3xl"
         style={{
@@ -145,267 +204,332 @@ const AdminDashboard: React.FC<Props> = ({ user, onLogout, onApiKeySave, onLangC
           border: '1px solid rgba(249,115,22,0.2)',
         }}
       >
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--primary)' }}>
-              👑 Admin – Livstidsabonnement
+              👑 Spanish · Admin 2.0
             </p>
-            <h2 className="text-2xl font-black mt-1">SaaS Kontrollpanel</h2>
-            <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-              {user.email}
-            </p>
+            <h2 className="text-2xl font-black mt-1">Brukere og tilgang</h2>
+            <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{user.email}</p>
           </div>
-          <a
-            href="https://dashboard.stripe.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-4 py-2 rounded-xl text-sm font-semibold"
-            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--secondary)' }}
+          <button
+            onClick={refresh}
+            disabled={loading}
+            className="px-3 py-2 rounded-xl text-sm font-semibold"
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
           >
-            Stripe ↗
-          </a>
+            {loading ? '↻' : '↻ Oppdater'}
+          </button>
         </div>
       </div>
 
-      {error && (
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          ['👥', 'Brukere', String(data?.stats.users || 0)],
+          ['✅', 'Aktive', String(data?.stats.active || 0)],
+          ['💳', 'Betalende', String(data?.stats.paid || 0)],
+          ['🤖', 'AI-kostnad USD', '$' + Number(data?.stats.estimated_ai_cost_usd || 0).toFixed(4)],
+        ].map(item => (
+          <div
+            key={item[1]}
+            className="p-4 rounded-2xl"
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+          >
+            <p className="text-xl">{item[0]}</p>
+            <p className="text-2xl font-black mt-1">{item[2]}</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{item[1]}</p>
+          </div>
+        ))}
+      </div>
+
+      {(error || notice) && (
         <div
-          className="p-4 rounded-2xl"
-          style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)' }}
+          className="p-4 rounded-2xl text-sm"
+          style={{
+            background: error ? 'rgba(248,113,113,0.08)' : 'rgba(74,222,128,0.08)',
+            color: error ? 'var(--danger)' : 'var(--success)',
+            border: '1px solid ' + (error ? 'rgba(248,113,113,0.2)' : 'rgba(74,222,128,0.2)'),
+          }}
         >
-          <p className="text-sm font-semibold" style={{ color: 'var(--danger)' }}>⚠️ {error}</p>
+          {error || notice}
         </div>
       )}
 
-      {/* Tabs */}
       <div className="flex gap-2 overflow-x-auto">
         {([
-          { id: 'overview', label: '📊 Oversikt' },
-          { id: 'local', label: '📱 Registrerte' },
-        ] as const).map(t => (
+          ['users', '👥 Brukere'],
+          ['add', '➕ Legg til'],
+          ['invitations', '✉️ Invitasjoner'],
+          ['system', '⚙️ System'],
+        ] as const).map(item => (
           <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className="px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all"
+            key={item[0]}
+            onClick={() => setTab(item[0])}
+            className="px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap"
             style={{
-              background: tab === t.id ? 'var(--primary)' : 'var(--bg-card)',
-              color: tab === t.id ? 'white' : 'var(--text-muted)',
-              border: `1px solid ${tab === t.id ? 'transparent' : 'var(--border)'}`,
+              background: tab === item[0] ? 'var(--primary)' : 'var(--bg-card)',
+              color: tab === item[0] ? 'white' : 'var(--text-muted)',
+              border: '1px solid ' + (tab === item[0] ? 'transparent' : 'var(--border)'),
             }}
           >
-            {t.label}
+            {item[1]}
           </button>
         ))}
       </div>
 
-      {/* Overview tab */}
-      {tab === 'overview' && !stats && (
-        <div
-          className="p-4 rounded-2xl"
-          style={{ background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.2)' }}
-        >
-          <p className="font-bold mb-1">🔒 Stripe-data er midlertidig skjult</p>
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            Det gamle admin-endepunktet er stengt fordi e-post i URL ikke er sikker autentisering.
-            Kunder og betalinger vises igjen her når den nye server-verifiserte admininnloggingen er aktiv.
-          </p>
-          <a
-            href="https://dashboard.stripe.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block mt-3 text-sm font-semibold"
-            style={{ color: 'var(--secondary)' }}
-          >
-            Åpne Stripe Dashboard ↗
-          </a>
-        </div>
-      )}
-
-      {tab === 'overview' && stats && (
-        <>
-          <div className="grid grid-cols-2 gap-3">
-            <StatCard icon="💰" label="MRR" value={`€${fmt(stats.mrr)}`} sub="Månedlig inntekt" color="var(--success)" />
-            <StatCard icon="📈" label="ARR" value={`€${fmt(stats.arr)}`} sub="Årlig inntekt" color="var(--secondary)" />
-            <StatCard icon="💵" label="Total inntekt" value={`€${fmt(stats.totalRevenue)}`} sub="All tid" />
-            <StatCard icon="📅" label="Siste 30 dager" value={`€${fmt(stats.last30DaysRevenue)}`} sub="Inntekt" color="var(--primary)" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <StatCard icon="👥" label="Kunder" value={String(stats.totalCustomers)} sub="Totalt registrert" />
-            <StatCard icon="✅" label="Aktive" value={String(stats.activeSubscriptions)} sub="Betalende" color="var(--success)" />
-            <StatCard icon="📆" label="Månedlig" value={String(stats.monthlySubscribers)} sub="€7.99/mnd" />
-            <StatCard icon="🎯" label="Årlig" value={String(stats.yearlySubscribers)} sub="€71.91/år" color="var(--primary)" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <StatCard icon="❌" label="Kansellerte" value={String(stats.canceledSubscriptions)} color="var(--danger)" />
-            <StatCard icon="📉" label="Churn" value={`${stats.churnRate}%`} sub="Kanselleringsrate" />
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={exportCSV}
-              className="flex-1 py-3 rounded-xl text-sm font-semibold"
-              style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
-            >
-              📥 Eksporter CSV
-            </button>
-            <a
-              href="https://dashboard.stripe.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 py-3 rounded-xl text-sm font-semibold text-center"
-              style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--secondary)' }}
-            >
-              🔗 Åpne Stripe Dashboard
-            </a>
-          </div>
-        </>
-      )}
-
-      {/* Customers tab */}
-      {tab === 'customers' && (
-        <>
+      {tab === 'users' && (
+        <div className="space-y-3">
           <input
+            className="app-input"
             type="search"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Søk etter e-post eller navn..."
-            className="app-input"
+            placeholder="Søk navn, e-post eller telefon..."
           />
-          <div className="space-y-2">
-            {filteredCustomers.length === 0 && (
-              <p className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
-                {loading ? 'Laster...' : 'Ingen kunder funnet'}
-              </p>
-            )}
-            {filteredCustomers.map(c => (
+
+          {filtered.map(target => {
+            const owner = target.email.toLowerCase() === 'freddy.bremseth@gmail.com';
+            const paid = target.provider === 'stripe';
+            const active = target.access_status === 'active' || target.access_status === 'grace';
+
+            return (
               <div
-                key={c.id}
+                key={target.user_id}
                 className="p-4 rounded-2xl"
                 style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
               >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-bold truncate">{c.name || c.email || 'Uten navn'}</p>
-                    <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{c.email}</p>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-bold truncate">{target.full_name || target.email}</p>
+                    <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{target.email}</p>
+                    {target.phone && (
+                      <p className="text-xs" style={{ color: 'var(--text-faint)' }}>{target.phone}</p>
+                    )}
                   </div>
-                  {c.subscription && (
-                    <span
-                      className="px-2 py-1 rounded-full text-xs font-bold whitespace-nowrap ml-2"
+                  <span
+                    className="px-2 py-1 rounded-full text-xs font-bold whitespace-nowrap"
+                    style={{
+                      background: active ? 'rgba(74,222,128,.12)' : 'rgba(248,113,113,.10)',
+                      color: active ? 'var(--success)' : 'var(--danger)',
+                    }}
+                  >
+                    {paid
+                      ? 'Betalt · ' + (target.billing_cycle === 'yearly' ? 'årlig' : 'månedlig')
+                      : target.access_kind || target.status || 'ukjent'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
+                  <div className="p-2 rounded-xl" style={{ background: 'var(--bg)' }}>
+                    <span style={{ color: 'var(--text-faint)' }}>Tilgang til</span>
+                    <p className="font-semibold mt-0.5">{fmtDate(target.ends_at)}</p>
+                  </div>
+                  <div className="p-2 rounded-xl" style={{ background: 'var(--bg)' }}>
+                    <span style={{ color: 'var(--text-faint)' }}>AI-oppgaver</span>
+                    <p className="font-semibold mt-0.5">{Number(target.usage?.ai_requests || 0)}</p>
+                  </div>
+                  <div className="p-2 rounded-xl" style={{ background: 'var(--bg)' }}>
+                    <span style={{ color: 'var(--text-faint)' }}>AI-kostnad</span>
+                    <p className="font-semibold mt-0.5">
+                      {'$' + Number(target.usage?.estimated_cost_usd || 0).toFixed(4)}
+                    </p>
+                  </div>
+                </div>
+
+                {!owner && !paid && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <button disabled={working === target.user_id} onClick={() => quickGrant(target, 30)} className="btn-secondary px-3 py-1.5 text-xs">30 dager</button>
+                    <button disabled={working === target.user_id} onClick={() => quickGrant(target, 90)} className="btn-secondary px-3 py-1.5 text-xs">90 dager</button>
+                    <button disabled={working === target.user_id} onClick={() => quickGrant(target, 365)} className="btn-secondary px-3 py-1.5 text-xs">1 år</button>
+                    <button disabled={working === target.user_id} onClick={() => quickGrant(target, null)} className="btn-secondary px-3 py-1.5 text-xs">Lifetime</button>
+                    <button
+                      disabled={working === target.user_id}
+                      onClick={() => revoke(target)}
+                      className="px-3 py-1.5 rounded-xl text-xs font-semibold"
                       style={{
-                        background: c.subscription.status === 'active' ? 'rgba(16,185,129,0.15)' : 'rgba(251,191,36,0.15)',
-                        color: c.subscription.status === 'active' ? 'var(--success)' : 'var(--warning)',
+                        background: 'rgba(248,113,113,.08)',
+                        color: 'var(--danger)',
+                        border: '1px solid rgba(248,113,113,.2)',
                       }}
                     >
-                      {c.subscription.status}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center justify-between text-xs" style={{ color: 'var(--text-muted)' }}>
-                  <span>Opprettet {fmtDate(c.created)}</span>
-                  {c.subscription && (
-                    <span>
-                      {c.subscription.plan === 'yearly' ? '🎯 Årlig' : '📆 Månedlig'} · fornyes {fmtDate(c.subscription.currentPeriodEnd)}
-                      {c.subscription.cancelAtPeriodEnd && ' · kansellerer'}
-                    </span>
-                  )}
-                </div>
+                      Steng tilgang
+                    </button>
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
-        </>
-      )}
+            );
+          })}
 
-      {/* Payments tab */}
-      {tab === 'payments' && (
-        <div className="space-y-2">
-          {charges.length === 0 && (
-            <p className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
-              {loading ? 'Laster...' : 'Ingen betalinger enda'}
+          {!loading && filtered.length === 0 && (
+            <p className="text-center py-8 text-sm" style={{ color: 'var(--text-muted)' }}>
+              Ingen Spanish-brukere funnet.
             </p>
           )}
-          {charges.map(ch => (
+        </div>
+      )}
+
+      {tab === 'add' && (
+        <form
+          onSubmit={addUser}
+          className="p-4 rounded-2xl space-y-4"
+          style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+        >
+          <h3 className="font-black text-lg">Legg til bruker</h3>
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+            Opprett tilgang i RealtyFlow og send sikker ChatGenius-innloggingslenke.
+          </p>
+
+          <input className="app-input" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Navn" />
+          <input className="app-input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="E-post" />
+          <input className="app-input" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Telefonnummer (valgfritt)" />
+
+          <div className="grid grid-cols-2 gap-3">
+            <select className="app-input" value={accessKind} onChange={e => setAccessKind(e.target.value as AccessKind)}>
+              <option value="family">Familie</option>
+              <option value="manual">Manuell</option>
+              <option value="partner">Partner</option>
+              <option value="promo">Promo</option>
+            </select>
+            <select className="app-input" value={period} onChange={e => setPeriod(e.target.value as Period)}>
+              <option value="7">7 dager</option>
+              <option value="30">30 dager</option>
+              <option value="90">90 dager</option>
+              <option value="365">1 år</option>
+              <option value="custom">Egendefinert</option>
+              <option value="lifetime">Lifetime</option>
+            </select>
+          </div>
+
+          {period === 'custom' && (
+            <input className="app-input" type="date" value={customDate} onChange={e => setCustomDate(e.target.value)} />
+          )}
+
+          <textarea
+            className="app-input min-h-20"
+            value={note}
+            onChange={e => setNote(e.target.value)}
+            placeholder="Notat"
+          />
+
+          <button type="submit" disabled={working === 'add'} className="btn-primary w-full py-3.5">
+            {working === 'add' ? 'Oppretter...' : 'Opprett tilgang og send lenke'}
+          </button>
+        </form>
+      )}
+
+      {tab === 'invitations' && (
+        <div className="space-y-2">
+          {invitations.map(inv => (
             <div
-              key={ch.id}
-              className="p-4 rounded-2xl flex items-center justify-between"
+              key={inv.id}
+              className="p-4 rounded-2xl"
               style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
             >
-              <div className="min-w-0 flex-1">
-                <p className="font-bold">€{fmt(ch.amount)} {ch.currency.toUpperCase()}</p>
-                <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
-                  {ch.email} · {fmtDate(ch.created)}
-                </p>
+              <div className="flex justify-between gap-3">
+                <div>
+                  <p className="font-bold">{inv.full_name || inv.email}</p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{inv.email}</p>
+                  {inv.phone && <p className="text-xs" style={{ color: 'var(--text-faint)' }}>{inv.phone}</p>}
+                </div>
+                <span className="text-xs font-bold">{inv.status}</span>
               </div>
-              <span
-                className="px-2 py-1 rounded-full text-xs font-bold whitespace-nowrap ml-2"
-                style={{
-                  background: ch.status === 'succeeded' ? 'rgba(16,185,129,0.15)' : 'rgba(248,113,113,0.15)',
-                  color: ch.status === 'succeeded' ? 'var(--success)' : 'var(--danger)',
-                }}
-              >
-                {ch.status}
-              </span>
+              <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
+                {inv.access_kind} · til {fmtDate(inv.ends_at)}
+              </p>
             </div>
           ))}
         </div>
       )}
 
-      {/* Local users tab */}
-      {tab === 'local' && (
-        <>
-          <input
-            type="search"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Søk etter brukernavn eller e-post..."
-            className="app-input"
-          />
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            {filteredLocal.length} registrerte brukere på denne enheten · inkluderer gratis-prøver
-          </p>
-          <div className="space-y-2">
-            {filteredLocal.map(u => (
-              <div
-                key={u.username}
-                className="p-4 rounded-2xl"
-                style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <p className="font-bold">{u.username}</p>
-                  <span
-                    className="px-2 py-1 rounded-full text-xs font-bold"
-                    style={{
-                      background: u.subscription.plan === 'trial' ? 'rgba(251,191,36,0.15)' :
-                        u.subscription.plan === 'monthly' || u.subscription.plan === 'yearly' || u.subscription.plan === 'lifetime' ? 'rgba(16,185,129,0.15)' :
-                          'rgba(148,163,184,0.15)',
-                      color: u.subscription.plan === 'trial' ? 'var(--warning)' :
-                        u.subscription.plan === 'monthly' || u.subscription.plan === 'yearly' || u.subscription.plan === 'lifetime' ? 'var(--success)' :
-                          'var(--text-muted)',
-                    }}
-                  >
-                    {u.subscription.plan === 'lifetime' ? 'livstid' : u.subscription.plan}
-                  </span>
-                </div>
-                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{u.email || '(ingen e-post)'}</p>
-                <div className="flex gap-4 mt-2 text-xs" style={{ color: 'var(--text-faint)' }}>
-                  <span>⚡ {u.xp} XP</span>
-                  <span>🔥 {u.streak} dager</span>
-                  <span>📚 {u.completedLessonIds?.length || 0} leksjoner</span>
-                  <span>💬 {u.conversationsCompleted || 0} samtaler</span>
-                </div>
-              </div>
-            ))}
+      {tab === 'system' && (
+        <div className="space-y-3">
+          <div
+            className="p-4 rounded-2xl"
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+          >
+            <p className="font-bold mb-1">🏗️ RealtyFlow Platform Core</p>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              Felles Auth, abonnement, Finance og AI-usage. Læringsdata ligger isolert i chatgenius-schemaet.
+            </p>
           </div>
-        </>
+
+          <div
+            className="p-4 rounded-2xl"
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+          >
+            <p className="font-bold mb-1">🎙️ Luna Live · eierkonto</p>
+            <p className="text-sm mb-3" style={{ color: 'var(--text-muted)' }}>
+              Nøkkelen lagres bare lokalt på denne enheten og brukes kun av Luna.
+            </p>
+            <div className="flex gap-2">
+              <input
+                className="app-input flex-1"
+                type="password"
+                value={lunaKey}
+                onChange={e => { setLunaKey(e.target.value); setLunaSaved(false); }}
+                placeholder="Gemini-nøkkel for Luna"
+              />
+              <button
+                className="btn-secondary px-4 text-sm"
+                onClick={() => {
+                  const key = lunaKey.trim();
+                  if (!key) return;
+                  onApiKeySave(key);
+                  setLunaKey('');
+                  setLunaSaved(true);
+                }}
+              >
+                Lagre
+              </button>
+            </div>
+            {lunaSaved && (
+              <p className="text-xs mt-2" style={{ color: 'var(--success)' }}>
+                ✓ Luna-nøkkel lagret lokalt.
+              </p>
+            )}
+          </div>
+
+          <div
+            className="p-4 rounded-2xl"
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+          >
+            <p className="font-bold mb-2">Forklaringsspråk</p>
+            <div className="flex flex-wrap gap-2">
+              {([
+                ['no', '🇳🇴 Norsk'],
+                ['en', '🇬🇧 English'],
+                ['de', '🇩🇪 Deutsch'],
+                ['ru', '🇷🇺 Русский'],
+              ] as [SourceLang, string][]).map(item => (
+                <button
+                  key={item[0]}
+                  onClick={() => onLangChange(item[0])}
+                  className="px-3 py-2 rounded-xl text-xs font-semibold"
+                  style={{
+                    background: user.sourceLang === item[0] ? 'var(--primary)' : 'var(--bg)',
+                    color: user.sourceLang === item[0] ? 'white' : 'var(--text-muted)',
+                    border: '1px solid var(--border)',
+                  }}
+                >
+                  {item[1]}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
 
-      {/* Logout */}
-      <div className="pt-6">
-        <button
-          onClick={onLogout}
-          className="w-full py-3 rounded-xl text-sm font-bold"
-          style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', color: 'var(--danger)' }}
-        >
-          Logg ut
-        </button>
-      </div>
+      <button
+        onClick={onLogout}
+        className="w-full py-3 rounded-2xl text-sm font-bold"
+        style={{
+          background: 'rgba(248,113,113,.08)',
+          color: 'var(--danger)',
+          border: '1px solid rgba(248,113,113,.2)',
+        }}
+      >
+        Logg ut
+      </button>
     </div>
   );
 };

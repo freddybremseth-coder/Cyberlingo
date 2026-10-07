@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { UserProfile, TRIAL_FREE_TASKS, getTrialTasksLeft } from '../types';
+import { startSubscription } from '../services/platformClient';
 
 interface Props {
   user: UserProfile;
@@ -12,35 +13,31 @@ const SubscriptionModal: React.FC<Props> = ({ user, onClose }) => {
   const [error, setError] = useState<string | null>(null);
 
   const tasksLeft = getTrialTasksLeft(user);
-  const trialExpired = user.subscription.plan === 'trial' && tasksLeft === 0;
+  const trialExpired =
+    user.subscription.plan === 'trial' &&
+    (tasksLeft === 0 ||
+      (user.subscription.expiresAt !== null &&
+        user.subscription.expiresAt !== undefined &&
+        user.subscription.expiresAt <= Date.now()));
 
   const features = [
-    { icon: '📖', text: 'Alle grammatikkleksjoner (A1–B2)' },
-    { icon: '💬', text: 'Ubegrenset samtaleøvelse med AI' },
-    { icon: '🔤', text: '500+ ord og fraser per kategori' },
-    { icon: '🎙️', text: 'Luna Live – sanntids stemmeprat' },
-    { icon: '📷', text: 'Kamera-læringsmodus' },
-    { icon: '🔥', text: 'Daglig streak og fremgangssporing' },
-    { icon: '🏆', text: 'Prestasjoner og XP-system' },
+    'Alle grammatikkleksjoner (A1–B2)',
+    'Ubegrenset standard AI-samtaletrening',
+    '500+ ord og fraser per kategori',
+    'Kamera-læringsmodus',
+    'Synkronisert progresjon på tvers av enheter',
+    'Daglig streak, prestasjoner og XP',
   ];
 
-  const handleSubscribe = async () => {
+  const subscribe = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/create-checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          plan: selectedPlan,
-          returnUrl: window.location.origin,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Checkout feilet');
+      const data = await startSubscription(selectedPlan);
+      if (!data.url) throw new Error('Checkout kunne ikke startes.');
       window.location.href = data.url;
     } catch (err: any) {
-      setError(err.message);
+      setError(err?.message || 'Checkout feilet.');
       setLoading(false);
     }
   };
@@ -51,7 +48,6 @@ const SubscriptionModal: React.FC<Props> = ({ user, onClose }) => {
         className="w-full max-w-sm rounded-3xl p-6 animate-slideUp sm:animate-scaleIn"
         style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
       >
-        {/* Header */}
         <div className="text-center mb-5">
           <div className="text-5xl mb-3">🌟</div>
           <h2 className="text-2xl font-black mb-1">
@@ -59,20 +55,18 @@ const SubscriptionModal: React.FC<Props> = ({ user, onClose }) => {
           </h2>
           <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
             {trialExpired
-              ? `Du har brukt dine ${TRIAL_FREE_TASKS} gratis oppgaver`
-              : 'Få ubegrenset tilgang til alle funksjoner'}
+              ? 'Prøven inkluderer ' + TRIAL_FREE_TASKS + ' AI-oppgaver og varer i opptil 7 dager'
+              : 'Få full tilgang til Spanish ChatGenius'}
           </p>
         </div>
 
-        {/* Plan selector */}
         <div className="grid grid-cols-2 gap-2 mb-5">
-          {/* Monthly */}
           <button
             onClick={() => setSelectedPlan('monthly')}
             className="p-3 rounded-2xl text-center transition-all"
             style={{
               background: selectedPlan === 'monthly' ? 'rgba(249,115,22,0.12)' : 'var(--bg-card)',
-              border: `1.5px solid ${selectedPlan === 'monthly' ? 'rgba(249,115,22,0.5)' : 'var(--border)'}`,
+              border: '1.5px solid ' + (selectedPlan === 'monthly' ? 'rgba(249,115,22,0.5)' : 'var(--border)'),
             }}
           >
             <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>Månedlig</p>
@@ -80,13 +74,12 @@ const SubscriptionModal: React.FC<Props> = ({ user, onClose }) => {
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>/måned</p>
           </button>
 
-          {/* Yearly */}
           <button
             onClick={() => setSelectedPlan('yearly')}
             className="p-3 rounded-2xl text-center relative transition-all"
             style={{
               background: selectedPlan === 'yearly' ? 'rgba(249,115,22,0.12)' : 'var(--bg-card)',
-              border: `1.5px solid ${selectedPlan === 'yearly' ? 'rgba(249,115,22,0.5)' : 'var(--border)'}`,
+              border: '1.5px solid ' + (selectedPlan === 'yearly' ? 'rgba(249,115,22,0.5)' : 'var(--border)'),
             }}
           >
             <span
@@ -101,53 +94,55 @@ const SubscriptionModal: React.FC<Props> = ({ user, onClose }) => {
           </button>
         </div>
 
-        {/* Features */}
         <ul className="space-y-2 mb-5">
-          {features.map((f, i) => (
-            <li key={i} className="flex items-center gap-2 text-sm">
+          {features.map(text => (
+            <li key={text} className="flex items-center gap-2 text-sm">
               <span className="text-green-400">✓</span>
-              <span style={{ color: 'var(--text)' }}>{f.text}</span>
+              <span>{text}</span>
             </li>
           ))}
         </ul>
 
+        <div
+          className="p-3 rounded-xl mb-4 text-xs"
+          style={{
+            background: 'rgba(56,189,248,.06)',
+            border: '1px solid rgba(56,189,248,.15)',
+            color: 'var(--text-muted)',
+          }}
+        >
+          Luna Live er en eier-/utviklerfunksjon og er ikke en del av ordinært Premium.
+        </div>
+
         {error && (
-          <p className="text-xs text-center mb-3 px-2" style={{ color: 'var(--danger)' }}>
-            ⚠️ {error}
-          </p>
+          <p className="text-xs text-center mb-3" style={{ color: 'var(--danger)' }}>⚠️ {error}</p>
         )}
 
-        {/* Subscribe button */}
         <button
-          onClick={handleSubscribe}
+          onClick={subscribe}
           disabled={loading}
-          className="btn-primary w-full py-4 text-base mb-3 flex items-center justify-center gap-2"
-          style={{ opacity: loading ? 0.7 : 1 }}
+          className="btn-primary w-full py-4 text-base mb-3"
+          style={{ opacity: loading ? .7 : 1 }}
         >
-          {loading ? (
-            <>
-              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              Kobler til Stripe...
-            </>
-          ) : (
-            selectedPlan === 'yearly'
+          {loading
+            ? 'Kobler til Stripe...'
+            : selectedPlan === 'yearly'
               ? 'Start nå – €71.91/år'
-              : 'Start nå – €7.99/mnd'
-          )}
+              : 'Start nå – €7.99/mnd'}
         </button>
 
         {!trialExpired && (
           <button
             onClick={onClose}
-            className="w-full py-3 text-sm font-semibold transition-opacity hover:opacity-70"
+            className="w-full py-3 text-sm font-semibold"
             style={{ color: 'var(--text-muted)' }}
           >
-            Fortsett prøveperioden ({tasksLeft} oppgaver igjen)
+            Fortsett prøveperioden ({tasksLeft} AI-oppgaver igjen)
           </button>
         )}
 
         <p className="text-center text-xs mt-3" style={{ color: 'var(--text-faint)' }}>
-          Sikker betaling via Stripe · Avslutt når som helst
+          Sikker betaling via Stripe · Abonnement styres av RealtyFlow Platform Core
         </p>
       </div>
     </div>
